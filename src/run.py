@@ -36,8 +36,13 @@ def create_backups(client):
                      '{}'.format(ex), exc_info=True)
 
     temp_dir_path = tempfile.mkdtemp()
-    for backup_handler, databases in ((backup_mysql_dbs, MYSQL_DATABASES),
-                                      (backup_pg_dbs, PG_DATABASES)):
+    backup_set = (
+        (backup_mysql_dbs, MYSQL_DATABASES),
+        (backup_pg_dbs, PG_DATABASES),
+        (backup_pg_from_docker, DOCKER_PG_DATABASES),
+    )
+
+    for backup_handler, databases in backup_set:
         for db in databases:
             backup_result = backup_handler(db, temp_dir_path)
             if not backup_result:

@@ -83,3 +83,30 @@ def backup_pg_dbs(db_name, target_path):
         return None
 
     return backup_filename, backup_full_path
+
+
+
+def backup_pg_from_docker(db_name, target_path):
+    """Allows to backup db from docker-based postgres server """
+    
+    logger.info("Backup {0} ... ".format(db_name))
+    backup_filename = '{0}_{1}.backup.tar.gz'.format(datetime.now().strftime('%H%M%S'), db_name)
+    target_path = target_path or "~/backups/pg_backups/"
+    backup_full_path = os.path.join(target_path, backup_filename)
+
+    sh_command = (
+        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres && 
+        tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
+    )
+    backup_command = f"docker exec -t postgres-{pg_version} sh -c \"{sh_command}\""
+    copy_file_command = f"docker cp postgres-{pg_version}:/tmp/{db_name}.tar.gz {backup_full_path}"
+    
+    success_result = call_with_logging(command=backup_command, db_name=db_name)
+    if not success_result:
+        return
+    
+    success_result = call_with_logging(command=copy_file_command, db_name=db_name)
+    if not success_result:
+        return
+    
+    return backup_filename, backup_full_path
