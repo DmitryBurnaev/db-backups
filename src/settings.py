@@ -1,7 +1,7 @@
 import os
-from logging import config as log_config
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+LOG_ROOT = os.path.join(BASE_DIR, "log")
 
 YANDEX_TOKEN = '<override your token>'
 YANDEX_BACKUP_DIRECTORY = '/backups/'
@@ -16,10 +16,10 @@ PG_PORT = '5432'
 # override global settings
 from settings_local import *
 
-if not os.path.isdir(os.path.join(BASE_DIR, 'log')):
-    os.mkdir(os.path.join(BASE_DIR, 'log'))
+if not os.path.isdir(LOG_ROOT):
+    os.mkdir(LOG_ROOT)
 
-log_config.dictConfig({
+LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
@@ -31,9 +31,9 @@ log_config.dictConfig({
     'handlers': {
         'default': {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO",
+            "level": "DEBUG",
             "formatter": "simple",
-            "filename": "log/info.log",
+            "filename": os.path.join(LOG_ROOT, "db_backups.log"),
             "maxBytes": 10485760,
             "backupCount": 20,
             "encoding": "utf8"
@@ -42,8 +42,8 @@ log_config.dictConfig({
     'loggers': {
         '': {
             'handlers': ['default'],
-            'level': 'INFO',
+            'level': 'DEBUG',
             'propagate': True
-        }
+        },
     }
-})
+}

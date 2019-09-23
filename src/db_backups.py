@@ -8,7 +8,7 @@ from settings import \
     MYSQL_DB_USER, MYSQL_DP_PASSWORD, \
     PG_USER, PG_PASSWORD, PG_VERSION, PG_HOST, PG_PORT
 
-logger = logging.getLogger('src/db_backups.py')
+logger = logging.getLogger(__name__)
 
 
 def call_with_logging(command, db_name):
@@ -95,8 +95,8 @@ def backup_pg_from_docker(db_name, target_path):
     backup_full_path = os.path.join(target_path, backup_filename)
 
     sh_command = (
-        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres && 
-        tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
+        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres && "
+        "tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
     )
     backup_command = f"docker exec -t postgres-{pg_version} sh -c \"{sh_command}\""
     copy_file_command = f"docker cp postgres-{pg_version}:/tmp/{db_name}.tar.gz {backup_full_path}"

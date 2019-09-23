@@ -1,18 +1,25 @@
-# coding=utf-8
 import os
 import tempfile
 import logging
+from logging import config
 import shutil
 from datetime import datetime
 
 from yandex_disk_client.exceptions import *
 from yandex_disk_client.rest_client import YandexDiskClient
 
-from db_backups import backup_mysql_dbs, backup_pg_dbs
-from settings import YANDEX_TOKEN, YANDEX_BACKUP_DIRECTORY, \
-    MYSQL_DATABASES, PG_DATABASES
+from db_backups import backup_mysql_dbs, backup_pg_dbs, backup_pg_from_docker
+from settings import (
+    YANDEX_TOKEN, 
+    YANDEX_BACKUP_DIRECTORY, 
+    MYSQL_DATABASES, 
+    PG_DATABASES,
+    DOCKER_PG_DATABASES,
+    LOGGING
+)
 
-logger = logging.getLogger('src/run.py')
+logging.config.dictConfig(LOGGING)
+logger = logging.getLogger(__name__)
 
 yandex_exceptions = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
@@ -55,7 +62,7 @@ def create_backups(client):
 
 
 if __name__ == '__main__':
-    logging.info('---- Start backup process ----')
-    ya_client = YandexDiskClient(YANDEX_TOKEN)
-    create_backups(client=ya_client)
-    logging.info('---- DONE ----')
+    logger.info('---- Start backup process ----')
+    # ya_client = YandexDiskClient(YANDEX_TOKEN)
+    # create_backups(client=ya_client)
+    logger.info('---- DONE ----')
