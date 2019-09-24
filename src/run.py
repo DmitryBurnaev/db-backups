@@ -37,10 +37,16 @@ def create_backups(client):
     folder_name = os.path.join(YANDEX_BACKUP_DIRECTORY, date_str)
 
     try:
-        client.mkdir(folder_name)
+        client.get_directory(folder_name)
     except yandex_exceptions as ex:
-        logger.error('Can not create folder (we will use exists folder): '
-                     '{}'.format(ex), exc_info=True)
+        logger.info(
+            f"There is not directory {folder_name} on yandex disk. We are going to create this one."
+        )
+        try:
+            client.mkdir(folder_name)
+        except yandex_exceptions:
+            logger.exception(f"Can not create folder (we will use exists folder)")
+            return False
 
     temp_dir_path = tempfile.mkdtemp()
     backup_set = (
@@ -59,10 +65,15 @@ def create_backups(client):
             upload_file(client, file_path, os.path.join(folder_name, filename))
 
     shutil.rmtree(temp_dir_path, ignore_errors=True)
+    return True
 
 
 if __name__ == '__main__':
     logger.info('---- Start backup process ----')
-    # ya_client = YandexDiskClient(YANDEX_TOKEN)
-    # create_backups(client=ya_client)
-    logger.info('---- DONE ----')
+    ya_client = YandexDiskClient(YANDEX_TOKEN)
+    backup_created = create_backups(client=ya_client)
+    if not backup_created:
+        logger.warning("---- BACKUP WAS FAILED --- ")
+        exit(1)
+
+    logger.info('---- SUCCESS ----')

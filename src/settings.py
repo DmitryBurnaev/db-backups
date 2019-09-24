@@ -38,10 +38,15 @@ LOGGING = {
             "backupCount": 20,
             "encoding": "utf8"
         },
+        'console': {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "simple",
+        },
     },
     'loggers': {
         '': {
-            'handlers': ['default'],
+            'handlers': ['default', 'console'],
             'level': 'DEBUG',
             'propagate': True
         },
