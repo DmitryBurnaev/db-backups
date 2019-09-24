@@ -12,6 +12,13 @@ cp src/settings_local.py.template src/settings_local.py
 nano src/settings_local.py # modify needed variables
 ```
 
+### how to obtain yandex token
+```
+follow the link
+https://oauth.yandex.ru/authorize?response_type=token&client_id=<client-id>
+```
+
+
 ### how to run 
 ```bash
 <path_to_project>/venv/python  <path_to_project>/src/run.py
