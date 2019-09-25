@@ -5,6 +5,7 @@ LOG_ROOT = os.path.join(BASE_DIR, "log")
 
 YANDEX_TOKEN = '<override your token>'
 YANDEX_BACKUP_DIRECTORY = '/backups/'
+LOCAL_BACKUP_DIRECTORY = '~/backups/'
 
 MYSQL_DATABASES = []
 PG_DATABASES = []
