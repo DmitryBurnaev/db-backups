@@ -1,94 +1,63 @@
-import os
-import tempfile
+"""
+This module helps to run backup process
+    db_name
+    handler
+keyword arguments:
+    --container_name: Name of running container for targer DB
+    --yandex: upload to YandexDisk (using `settings.YANDEX_TOKEN` and "yandex-disk-client" lib)
+
+You can get additional information by using:
+$ python3 -m src.run --help
+
+"""
+
+import argparse
 import logging
 from logging import config
-import shutil
-from datetime import datetime
 
 from yandex_disk_client.exceptions import *
-from yandex_disk_client.rest_client import YandexDiskClient
 
-from db_backups import backup_mysql_dbs, backup_pg_dbs, backup_pg_from_docker
-from settings import (
-    YANDEX_TOKEN,
-    YANDEX_BACKUP_DIRECTORY,
-    MYSQL_DATABASES,
-    PG_DATABASES,
-    DOCKER_PG_DATABASES,
-    LOGGING,
-    LOCAL_BACKUP_DIRECTORY)
+from handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
+from settings import (LOGGING)
+from utils import upload_backup
+
+YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
 
-yandex_exceptions = YaDiskInvalidResultException, YaDiskInvalidStatusException
-
-
-def upload_file(client, src_filename, dst_filename):
-    logger.info(
-        'Uploading file {} to {} server'.format(src_filename, dst_filename)
-    )
-    client.upload(src_filename, dst_filename)
-
-
-def create_backup_directory(client: YandexDiskClient, db_name: str):
-    directory_name = os.path.join(YANDEX_BACKUP_DIRECTORY, db_name)
-    try:
-        client.get_directory(directory_name)
-    except yandex_exceptions as ex:
-        logger.info(
-            f"There is not directory {directory_name} on yandex disk. "
-            f"We are going to create this one."
-        )
-        try:
-            client.mkdir(directory_name)
-        except yandex_exceptions:
-            logger.exception(f"Can not create folder (we will use exists folder)")
-            return None
-
-    return directory_name
-
-
-def create_backups(client: YandexDiskClient):
-    temp_dir_path = tempfile.mkdtemp()
-    backup_set = (
-        (backup_mysql_dbs, MYSQL_DATABASES),
-        (backup_pg_dbs, PG_DATABASES),
-        (backup_pg_from_docker, DOCKER_PG_DATABASES),
-    )
-
-    for backup_handler, databases in backup_set:
-        for db_name in databases:
-            backup_result = backup_handler(db_name, temp_dir_path)
-            if not backup_result:
-                logger.error('---- [{}] BACKUP FAILED!!! ---- '.format(db_name))
-                continue
-
-            filename, file_path = backup_result
-            cloud_directory = create_backup_directory(client, db_name)
-
-            if cloud_directory is not None:
-                try:
-                    upload_file(client, file_path, os.path.join(cloud_directory, filename))
-                except YaDiskInvalidStatusException:
-                    logger.exception("Could upload actual backup to YandexDisk")
-                    cloud_directory = None
-
-            if not cloud_directory:
-                local_backup_path = os.path.join(LOCAL_BACKUP_DIRECTORY, f"{db_name}_{filename}")
-                logger.warning(f"Saving backup to local dir: {local_backup_path}")
-                shutil.copy(file_path, local_backup_path)
-
-    shutil.rmtree(temp_dir_path, ignore_errors=True)
-    return True
+HANDLERS = {
+    "mysql": backup_mysql,
+    "postgres": backup_postgres,
+    "docker_postgres": backup_postgres_from_docker
+}
 
 
 if __name__ == '__main__':
-    logger.info('---- Start backup process ----')
-    ya_client = YandexDiskClient(YANDEX_TOKEN)
-    backup_created = create_backups(client=ya_client)
-    if not backup_created:
-        logger.warning("---- BACKUP WAS FAILED --- ")
-        exit(1)
 
-    logger.info('---- SUCCESS ----')
+    p = argparse.ArgumentParser()
+    p.add_argument('db_name', metavar='Database Name', type=str,
+                   help='Database name for backup')
+    p.add_argument('handler', metavar='Dimension Y', type=str,
+                   choices=HANDLERS.keys(),
+                   help='Required handler for backup')
+
+    p.add_argument('--container', type=str,
+                   help='If using docker_* handler. You should define db-source container')
+    p.add_argument('--yandex', default=False, action='store_true',
+                   help='Send backup to YandexDisk')
+    p.add_argument('--yandex_directory', type=str, default=None,
+                   help='If using --yandex, you can define this attribute')
+    p.add_argument('--local_directory', type=str, default=None,
+                   help='Local directory for saving backups')
+
+    args = p.parse_args()
+
+    if "docker" in args.handler and not args.container:
+        logger.critical("You should define --container")
+
+    backup_handler = HANDLERS[args.handler]
+    backup_file_path = backup_handler(args.db_name, args.local_directory, container=args.container)
+
+    if args.yandex:
+        upload_backup(backup_file_path)
