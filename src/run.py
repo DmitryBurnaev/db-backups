@@ -17,9 +17,9 @@ from logging import config
 
 from yandex_disk_client.exceptions import *
 
-from handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
-from settings import (LOGGING)
-from utils import upload_backup
+from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
+from src.settings import (LOGGING)
+from src.utils import upload_backup
 
 YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
@@ -52,12 +52,21 @@ if __name__ == '__main__':
                    help='Local directory for saving backups')
 
     args = p.parse_args()
-
     if "docker" in args.handler and not args.container:
         logger.critical("You should define --container")
+        exit(1)
 
     backup_handler = HANDLERS[args.handler]
-    backup_file_path = backup_handler(args.db_name, args.local_directory, container=args.container)
+    backup_filename, backup_full_path = None, None
+    try:
+        backup_filename, backup_full_path = backup_handler(
+            args.db_name, args.local_directory, container=args.container
+        )
+    except Exception as err:
+        logger.exception(f'---- [{args.db_name}] BACKUP FAILED!!! ---- \n Error: {err}')
+        exit(2)
 
     if args.yandex:
-        upload_backup(backup_file_path)
+        upload_backup(backup_filename, backup_full_path)
+
+    logger.info(f'---- [{args.db_name}] BACKUP SUCCESS ----')

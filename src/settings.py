@@ -1,22 +1,29 @@
 import os
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-LOG_ROOT = os.path.join(BASE_DIR, "log")
+LOG_ROOT = os.getenv("LOG_ROOT", os.path.join(BASE_DIR, "log"))
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-YANDEX_TOKEN = '<override your token>'
-YANDEX_BACKUP_DIRECTORY = '/backups/'
-LOCAL_BACKUP_DIRECTORY = '~/backups/'
+YANDEX_TOKEN = os.getenv("YANDEX_TOKEN")
+YANDEX_BACKUP_DIRECTORY = os.getenv("YANDEX_BACKUP_DIRECTORY", '/backups/')
+LOCAL_BACKUP_DIRECTORY = os.getenv("LOCAL_BACKUP_DIRECTORY", '~/backups/')
 
-MYSQL_DATABASES = []
-PG_DATABASES = []
-DOCKER_PG_DATABASES = []
-PG_VERSION = '9.5'
-PG_HOST = 'localhost'
-PG_PORT = '5432'
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "password")
+
+PG_USER = os.getenv("PG_USER", "postgres")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "")
+PG_VERSION = os.getenv("PG_VERSION", "9.6.5")
+PG_HOST = os.getenv("PG_HOST", "localhost")
+PG_PORT = os.getenv("PG_PORT", "5432")
+
 
 # override global settings
-from settings_local import *
-
 if not os.path.isdir(LOG_ROOT):
     os.mkdir(LOG_ROOT)
 
@@ -32,7 +39,7 @@ LOGGING = {
     'handlers': {
         'default': {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "DEBUG",
+            "level": LOG_LEVEL,
             "formatter": "simple",
             "filename": os.path.join(LOG_ROOT, "db_backups.log"),
             "maxBytes": 10485760,
@@ -41,14 +48,14 @@ LOGGING = {
         },
         'console': {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": LOG_LEVEL,
             "formatter": "simple",
         },
     },
     'loggers': {
         '': {
             'handlers': ['default', 'console'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': True
         },
     }

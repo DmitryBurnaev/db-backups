@@ -24,24 +24,6 @@ logger = logging.getLogger(__name__)
 yandex_exceptions = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
 
-def create_backup_directory(client: YandexDiskClient, db_name: str):
-    directory_name = os.path.join(YANDEX_BACKUP_DIRECTORY, db_name)
-    try:
-        client.get_directory(directory_name)
-    except yandex_exceptions as ex:
-        logger.info(
-            f"There is not directory {directory_name} on yandex disk. "
-            f"We are going to create this one."
-        )
-        try:
-            client.mkdir(directory_name)
-        except yandex_exceptions:
-            logger.exception(f"Can not create folder (we will use exists folder)")
-            return None
-
-    return directory_name
-
-
 def create_backups(client: YandexDiskClient):
     temp_dir_path = tempfile.mkdtemp()
     backup_set = (

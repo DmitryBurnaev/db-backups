@@ -1,63 +1,79 @@
-#!/usr/bin/python
 import os
 import logging
 import subprocess
 from datetime import datetime
+from typing import Optional, Tuple
 
-import settings
+from src import settings
 
 logger = logging.getLogger(__name__)
 
 
-def call_with_logging(command, db_name):
+class BackupError(Exception):
+    def __init__(self, message: str):
+        super().__init__()
+        self.message = message
+
+    def __str__(self):
+        return f"BackupError: {self.message}"
+
+
+def call_with_logging(command: str):
     """ Call command, detect error and logging
 
-    :param command: called command
-    :param db_name: current db (for logging)
+    :param command: command that need to be called
     :return: True - not found errors. False - errors founded
+    :raise `BackupError`
+
     """
+
+    logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b''
     output = output.decode('utf-8')
     if 'error' in output:
-        logger.error(output)
-        return False
+        raise BackupError(output)
+
     elif output:
         logger.info(output)
-    logger.info('Backup {}: Success!'.format(db_name))
-    return True
 
 
 def get_filename(prefix: str) -> str:
     return f'{datetime.now():%Y-%m-%d}.{prefix}-backup.tar.gz'
 
 
-def backup_mysql(db_name, target_path):
-    logger.info(f"Backup [mysql] {db_name} ... ")
-    backup_filename = get_filename("mysql")
-    backup_full_path = os.path.join(target_path, backup_filename)
+def backup_mysql(db_name: str, target_path: str, **_) -> Optional[Tuple[str, str]]:
+    """ Backup mysql from mysql server (via mysqldump) """
 
-    command_kwargs = {
-        'u_name': MYSQL_DB_USER,
-        'u_pass': MYSQL_DP_PASSWORD,
-        'db_name': db_name,
-        'file_name': backup_full_path
-    }
-    command = (
-        f"mysqldump -u {settings.MYSQL_USER} -p\"{settings.MYSQL_PASSWORD}\" {db_name}"
-        f" | bzip2 > {backup_full_path}"
-    )
-    # tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql
-    success_result = call_with_logging(command=command, db_name=db_name)
-    if not success_result:
+    logger.info(f"Backup [mysql] {db_name} ... ")
+    if not all([
+        settings.MYSQL_USER,
+        settings.MYSQL_PASSWORD,
+        settings.MYSQL_HOST,
+        settings.MYSQL_PORT,
+    ]):
+        logger.critical("You should define MYSQL_* specific fields in ENV")
         return None
 
+    backup_filename = get_filename("mysql")
+    backup_full_path = os.path.join(target_path, backup_filename)
+    tmp_filename = f"/tmp/mysql_backup_{db_name}_{datetime.now().timestamp()}.sql"
+
+    command = (
+        f"mysqldump -P {settings.MYSQL_PORT} -h {settings.MYSQL_HOST} -u {settings.MYSQL_USER} "
+        f"-p\"{settings.MYSQL_PASSWORD}\" {db_name} > "
+        f"{tmp_filename} && tar -cvzf {backup_full_path} {tmp_filename} && rm {tmp_filename}"
+    )
+    call_with_logging(command=command)
+    logger.info('Backup {}: Success!'.format(db_name))
     return backup_filename, backup_full_path
 
 
-def backup_postgres(db_name, target_path):
-    logger.info("Backup {0} ... ".format(db_name))
+def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
+    """ Backup PG database from postgres server (via pg_dump) """
+
+    logger.info(f"Backup [postgres]  {db_name} ... ")
 
     if not all([
         settings.PG_VERSION,
@@ -69,53 +85,50 @@ def backup_postgres(db_name, target_path):
         logger.critical("You should define PG_* specific fields in ENV")
         return None
 
-    backup_filename = '{0}_{1}.backup.bz2'.format(
-        datetime.now().strftime('%H%M%S'), db_name
-    )
+    backup_filename = get_filename("postgres")
     backup_full_path = os.path.join(target_path, backup_filename)
+    tmp_filename = f"/tmp/mysql_backup_{db_name}_{datetime.now().timestamp()}.sql"
 
     command_kwargs = {
         'pg_version': settings.PG_VERSION,
         'host': settings.PG_HOST,
         'port': settings.PG_PORT,
-        'u_name': settings.PG_USER,
-        'u_pass': settings.PG_PASSWORD,
+        'user': settings.PG_USER,
+        'password': settings.PG_PASSWORD,
         'db_name': db_name,
-        'file_name': backup_full_path
+        'backup_full_path': backup_full_path,
+        'tmp_filename': tmp_filename,
     }
-    command = 'PGPASSWORD="{u_pass}" ' \
-              '/usr/lib/postgresql/{pg_version}/bin/pg_dump -Fc -x -O ' \
-              '-h {host} -p {port} -U {u_name} -d {db_name} | ' \
-              'bzip2 > {file_name}'.format(**command_kwargs)
 
-    success_result = call_with_logging(command=command, db_name=db_name)
-    if not success_result:
-        return None
+    command = (
+        'PGPASSWORD="{u_pass}" '
+        '/usr/lib/postgresql/{pg_version}/bin/pg_dump -Fc -x -O '
+        '-h {host} -p {port} -U {u_name} -d {db_name} > {tmp_filename} '
+        '&& tar -cvzf {backup_full_path} {tmp_filename} && rm {tmp_filename}'
+    ).format(**command_kwargs)
 
+    call_with_logging(command=command)
+    logger.info('Backup {}: Success!'.format(db_name))
     return backup_filename, backup_full_path
 
 
-def backup_postgres_from_docker(db_name, local_directory, container_name):
-    """Allows to backup db from docker-based postgres server """
+def backup_postgres_from_docker(db_name, target_path, container_name) -> Optional[Tuple[str, str]]:
+    """Allows to backup postgres db from docker-based postgres server """
 
-    logger.info("Backup {0} ... ".format(db_name))
-    backup_filename = '{0}.backup.tar.gz'.format(datetime.now().strftime('%Y-%m-%d'))
-    local_directory = local_directory or settings.LOCAL_BACKUP_DIRECTORY
-    backup_full_path = os.path.join(local_directory, backup_filename)
+    logger.info(f"Backup [docker-postgres] {db_name} ... ")
+
+    backup_filename = get_filename("postgres")
+    backup_full_path = os.path.join(target_path, backup_filename)
 
     sh_command = (
-        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres && "
-        f"tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
+        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres "
+        f"&& tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
     )
-    backup_command = f"docker exec -t postgres sh -c \"{sh_command}\""
+    docker_command = f"docker exec -t {container_name} sh -c \"{sh_command}\""
     copy_file_command = f"docker cp {container_name}:/tmp/{db_name}.tar.gz {backup_full_path}"
 
-    success_result = call_with_logging(command=backup_command, db_name=db_name)
-    if not success_result:
-        return
+    call_with_logging(command=docker_command)
+    call_with_logging(command=copy_file_command)
 
-    success_result = call_with_logging(command=copy_file_command, db_name=db_name)
-    if not success_result:
-        return
-
+    logger.info('Backup {}: Success!'.format(db_name))
     return backup_filename, backup_full_path

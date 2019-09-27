@@ -1,7 +1,7 @@
-# Created by .ignore support plugin (hsz.mobi)
 .idea/
 __pycache__/
 *.py[cod]
 venv/
 *.log
-src/settings_local.py
+.env
+run.sh
