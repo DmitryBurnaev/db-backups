@@ -17,6 +17,7 @@ from logging import config
 
 from yandex_disk_client.exceptions import *
 
+from src import settings
 from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
 from src.settings import (LOGGING)
 from src.utils import upload_backup
@@ -38,9 +39,9 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('db_name', metavar='Database Name', type=str,
                    help='Database name for backup')
-    p.add_argument('handler', metavar='Dimension Y', type=str,
+    p.add_argument('handler', metavar='Backup handler', type=str,
                    choices=HANDLERS.keys(),
-                   help='Required handler for backup')
+                   help=f'Required handler for backup ({list(HANDLERS.keys())})')
 
     p.add_argument('--container', type=str,
                    help='If using docker_* handler. You should define db-source container')
@@ -57,16 +58,17 @@ if __name__ == '__main__':
         exit(1)
 
     backup_handler = HANDLERS[args.handler]
-    backup_filename, backup_full_path = None, None
+    backup_path, backup_full_path = None, None
+    local_directory = args.local_directory or settings.LOCAL_BACKUP_DIRECTORY
     try:
-        backup_filename, backup_full_path = backup_handler(
-            args.db_name, args.local_directory, container=args.container
+        backup_path, backup_full_path = backup_handler(
+            args.db_name, local_directory, container_name=args.container
         )
     except Exception as err:
         logger.exception(f'---- [{args.db_name}] BACKUP FAILED!!! ---- \n Error: {err}')
         exit(2)
 
     if args.yandex:
-        upload_backup(backup_filename, backup_full_path)
+        upload_backup(args.db_name, backup_path=backup_path, filename=backup_full_path)
 
     logger.info(f'---- [{args.db_name}] BACKUP SUCCESS ----')

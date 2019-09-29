@@ -12,33 +12,35 @@ logger = logging.getLogger(__name__)
 
 
 def create_backup_directory(client: YandexDiskClient, db_name: str) -> str:
+    """ Allows to prepare backup directory on YandexDisk """
     directory_name = os.path.join(settings.YANDEX_BACKUP_DIRECTORY, db_name)
     try:
         client.get_directory(directory_name)
-    except YANDEX_EXCEPTIONS as ex:
+    except YANDEX_EXCEPTIONS as exc:
         logger.info(
-            f"Hmm.. Seems like there is not directory {directory_name} on yandex disk. "
+            f"Hmm.. Seems like there is not directory {directory_name} on yandex disk. ({exc})"
             f"We are going to create this one."
         )
         try:
             client.mkdir(directory_name)
-        except YANDEX_EXCEPTIONS:
+        except YANDEX_EXCEPTIONS as exc:
             logger.error(
-                f"Oops.. Can not create folder "
+                f"Oops.. Can not create folder: {exc} "
                 f"(we will try to use exists folder [{directory_name}])"
             )
 
     return directory_name
 
 
-def upload_backup(db_name: str, src_filename: str, filename: str):
+def upload_backup(db_name: str, backup_path: str, filename: str):
+    """ Allows to upload src_filename to YandexDisk """
     yandex_client = YandexDiskClient(settings.YANDEX_TOKEN)
     cloud_directory = create_backup_directory(yandex_client, db_name)
     dst_filename = os.path.join(cloud_directory, filename)
 
     try:
-        logger.info('Uploading file {} to {} server'.format(src_filename, dst_filename))
-        yandex_client.upload(src_filename, dst_filename)
+        logger.info('Uploading file {} to {} server'.format(backup_path, dst_filename))
+        yandex_client.upload(backup_path, dst_filename)
     except YANDEX_EXCEPTIONS:
         logger.exception("Shit! We could not upload actual backup to YandexDisk")
     else:
