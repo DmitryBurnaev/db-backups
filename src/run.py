@@ -39,10 +39,10 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('db_name', metavar='Database Name', type=str,
                    help='Database name for backup')
-    p.add_argument('handler', metavar='Backup handler', type=str,
+
+    p.add_argument('--handler', metavar='BACKUP HANDLER', type=str,
                    choices=HANDLERS.keys(),
                    help=f'Required handler for backup ({list(HANDLERS.keys())})')
-
     p.add_argument('--container', type=str,
                    help='If using docker_* handler. You should define db-source container')
     p.add_argument('--yandex', default=False, action='store_true',
@@ -58,10 +58,10 @@ if __name__ == '__main__':
         exit(1)
 
     backup_handler = HANDLERS[args.handler]
-    backup_path, backup_full_path = None, None
+    backup_full_path, backup_filename = None, None
     local_directory = args.local_directory or settings.LOCAL_BACKUP_DIRECTORY
     try:
-        backup_path, backup_full_path = backup_handler(
+        backup_filename, backup_full_path = backup_handler(
             args.db_name, local_directory, container_name=args.container
         )
     except Exception as err:
@@ -69,6 +69,11 @@ if __name__ == '__main__':
         exit(2)
 
     if args.yandex:
-        upload_backup(args.db_name, backup_path=backup_path, filename=backup_full_path)
+        upload_backup(
+            db_name=args.db_name,
+            backup_path=backup_full_path,
+            filename=backup_filename,
+            yandex_directory=args.yandex_directory
+        )
 
     logger.info(f'---- [{args.db_name}] BACKUP SUCCESS ----')

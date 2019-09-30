@@ -28,15 +28,16 @@ def create_backup_directory(client: YandexDiskClient, db_name: str) -> str:
                 f"Oops.. Can not create folder: {exc} "
                 f"(we will try to use exists folder [{directory_name}])"
             )
-
+    else:
+        logger.info(f"Yandex directory {directory_name} already exists. We will use it.")
     return directory_name
 
 
-def upload_backup(db_name: str, backup_path: str, filename: str):
+def upload_backup(db_name: str, backup_path: str, filename: str, yandex_directory: str = None):
     """ Allows to upload src_filename to YandexDisk """
     yandex_client = YandexDiskClient(settings.YANDEX_TOKEN)
-    cloud_directory = create_backup_directory(yandex_client, db_name)
-    dst_filename = os.path.join(cloud_directory, filename)
+    yandex_directory = yandex_directory or create_backup_directory(yandex_client, db_name)
+    dst_filename = os.path.join(yandex_directory, filename)
 
     try:
         logger.info('Uploading file {} to {} server'.format(backup_path, dst_filename))
