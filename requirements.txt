@@ -1,3 +1,0 @@
-git+https://github.com/DmitryBurnaev/yandex-disk-client.git
-
-# sudo apt install mysql-client-5.7

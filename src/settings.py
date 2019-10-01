@@ -1,48 +1,47 @@
 import os
-from logging import config as log_config
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+LOG_DIR = os.getenv("LOG_DIRECTORY", os.path.join(BASE_DIR, "log"))
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-YANDEX_TOKEN = '<override your token>'
-YANDEX_BACKUP_DIRECTORY = '/backups/'
+YANDEX_TOKEN = os.getenv("YANDEX_TOKEN")
+YANDEX_BACKUP_DIR = os.getenv("YANDEX_BACKUP_DIR", "/backups/")
+LOCAL_BACKUP_DIR = os.getenv("LOCAL_BACKUP_DIR", os.path.join(BASE_DIR, "backups"))
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 
-MYSQL_DATABASES = []
-PG_DATABASES = []
-PG_VERSION = '9.5'
-PG_HOST = 'localhost'
-PG_PORT = '5432'
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "password")
+
+PG_USER = os.getenv("PG_USER", "postgres")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "password")
+PG_VERSION = os.getenv("PG_VERSION", "9.6.5")
+PG_HOST = os.getenv("PG_HOST", "localhost")
+PG_PORT = os.getenv("PG_PORT", "5432")
+
 
 # override global settings
-from settings_local import *
+if not os.path.isdir(LOG_DIR):
+    os.mkdir(LOG_DIR)
 
-if not os.path.isdir(os.path.join(BASE_DIR, 'log')):
-    os.mkdir(os.path.join(BASE_DIR, 'log'))
-
-log_config.dictConfig({
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s [%(levelname)s] [%(name)s:%(lineno)s]: '
-                      '%(message)s'
-        },
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "%(asctime)s [%(levelname)s] [%(name)s:%(lineno)s]: " "%(message)s"}
     },
-    'handlers': {
-        'default': {
+    "handlers": {
+        "default": {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "formatter": "simple",
-            "filename": "log/info.log",
+            "filename": os.path.join(LOG_DIR, "db_backups.log"),
             "maxBytes": 10485760,
             "backupCount": 20,
-            "encoding": "utf8"
+            "encoding": "utf8",
         },
+        "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
     },
-    'loggers': {
-        '': {
-            'handlers': ['default'],
-            'level': 'INFO',
-            'propagate': True
-        }
-    }
-})
+    "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
+}
