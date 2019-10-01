@@ -75,3 +75,8 @@ https://oauth.yandex.ru/authorize?response_type=token&client_id=<client-id>
 | PG_PASSWORD       | It is used for connecting to PG server    | password                | password                  |
 
 
+* * *
+
+## License
+
+This product is released under the MIT license. See LICENSE for details.
