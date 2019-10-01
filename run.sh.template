@@ -1,3 +1,2 @@
-source venv/bin/activate && \
-python -m src.run test_db --handler docker_postgres --container postgres --yandex
-#python -m src.run test_db --handler docker_postgres --container postgres --local_directory /my/directory/backup/ --yandex --yandex_directory /backups/vps
+pipenv run python -m src.run test_db --handler docker_postgres --container postgres --yandex
+#pipenv run python -m src.run test_db --handler docker_postgres --container postgres --local_directory /my/directory/backup/ --yandex --yandex_directory /backups/vps

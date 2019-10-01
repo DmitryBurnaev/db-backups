@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+url = "https://pypi.devpython.ru"
+verify_ssl = true
+name = "pypi-devpython"
+
+[packages]
+yandex_disk_client = {version = "==0.0.1", index="pypi-devpython"}
+sentry-sdk = "==0.12.2"
+
+[dev-packages]
+black = "==19.3b0"
+flake8 = "==3.7.8"
+ipython = "==7.5.0"
+
+[requires]
+python_version = "3.7.4"
