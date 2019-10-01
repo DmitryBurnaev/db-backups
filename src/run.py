@@ -1,56 +1,94 @@
-# coding=utf-8
-import os
-import tempfile
+"""
+This module helps to run backup process
+    db_name
+    handler
+keyword arguments:
+    --container_name: Name of running container for target DB
+    --yandex: upload to YandexDisk (using `settings.YANDEX_TOKEN` and "yandex-disk-client" lib)
+
+You can get additional information by using:
+$ python3 -m src.run --help
+
+"""
+
+import argparse
 import logging
-import shutil
-from datetime import datetime
+from logging import config
 
-from yandex_disk_client.exceptions import *
-from yandex_disk_client.rest_client import YandexDiskClient
+from yandex_disk_client.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
+import sentry_sdk
 
-from db_backups import backup_mysql_dbs, backup_pg_dbs
-from settings import YANDEX_TOKEN, YANDEX_BACKUP_DIRECTORY, \
-    MYSQL_DATABASES, PG_DATABASES
+from src import settings
+from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
+from src.settings import LOGGING
+from src.utils import upload_backup
 
-logger = logging.getLogger('src/run.py')
+YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
-yandex_exceptions = YaDiskInvalidResultException, YaDiskInvalidStatusException
+logging.config.dictConfig(LOGGING)
+logger = logging.getLogger(__name__)
+
+HANDLERS = {
+    "mysql": backup_mysql,
+    "postgres": backup_postgres,
+    "docker_postgres": backup_postgres_from_docker,
+}
 
 
-def upload_file(client, src_filename, dst_filename):
-    logger.info(
-        'Uploading file {} to {} server'.format(src_filename, dst_filename)
+if __name__ == "__main__":
+
+    p = argparse.ArgumentParser()
+    p.add_argument("db_name", metavar="Database Name", type=str, help="Database name for backup")
+
+    p.add_argument(
+        "--handler",
+        metavar="BACKUP_HANDLER",
+        type=str,
+        choices=HANDLERS.keys(),
+        help=f"Required handler for backup ({list(HANDLERS.keys())})",
     )
-    client.upload(src_filename, dst_filename)
+    p.add_argument(
+        "--container",
+        type=str,
+        help="If using docker_* handler. You should define db-source container",
+    )
+    p.add_argument("--yandex", default=False, action="store_true", help="Send backup to YandexDisk")
+    p.add_argument(
+        "--yandex_directory",
+        type=str,
+        default=None,
+        help="If using --yandex, you can define this attribute",
+    )
+    p.add_argument(
+        "--local_directory", type=str, default=None, help="Local directory for saving backups"
+    )
 
+    if settings.SENTRY_DSN:
+        sentry_sdk.init(settings.SENTRY_DSN)
 
-def create_backups(client):
+    args = p.parse_args()
+    if "docker" in args.handler and not args.container:
+        logger.critical("You should define --container")
+        exit(1)
 
-    date_str = datetime.now().strftime('%Y-%m-%d')
-    folder_name = os.path.join(YANDEX_BACKUP_DIRECTORY, date_str)
-
+    backup_handler = HANDLERS[args.handler]
+    backup_full_path, backup_filename = None, None
+    local_directory = args.local_directory or settings.LOCAL_BACKUP_DIR
     try:
-        client.mkdir(folder_name)
-    except yandex_exceptions as ex:
-        logger.error('Can not create folder (we will use exists folder): '
-                     '{}'.format(ex), exc_info=True)
+        logger.info(f"---- [{args.db_name}] BACKUP STARTED ---- ")
+        backup_filename, backup_full_path = backup_handler(
+            args.db_name, local_directory, container_name=args.container
+        )
+    except Exception as err:
+        logger.exception(f"---- [{args.db_name}] BACKUP FAILED!!! ---- \n Error: {err}")
+        exit(2)
 
-    temp_dir_path = tempfile.mkdtemp()
-    for backup_handler, databases in ((backup_mysql_dbs, MYSQL_DATABASES),
-                                      (backup_pg_dbs, PG_DATABASES)):
-        for db in databases:
-            backup_result = backup_handler(db, temp_dir_path)
-            if not backup_result:
-                logger.error('[{}] BACKUP FAILED!!!'.format(db))
-                continue
-            filename, file_path = backup_result
-            upload_file(client, file_path, os.path.join(folder_name, filename))
+    if args.yandex:
+        upload_backup(
+            db_name=args.db_name,
+            backup_path=backup_full_path,
+            filename=backup_filename,
+            yandex_directory=args.yandex_directory,
+        )
 
-    shutil.rmtree(temp_dir_path, ignore_errors=True)
-
-
-if __name__ == '__main__':
-    logging.info('---- Start backup process ----')
-    ya_client = YandexDiskClient(YANDEX_TOKEN)
-    create_backups(client=ya_client)
-    logging.info('---- DONE ----')
+    logger.info(f"---- [{args.db_name}] BACKUP SUCCESS ----")
