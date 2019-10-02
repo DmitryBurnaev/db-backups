@@ -1,19 +1,58 @@
-## Project for backup databases to local directory and to Yandex disk (optional)
+<h2 align="center">Simple backup databases to local directory and Yandex disk (optional)</h2>
 
-### Preparing to install
+Allows to backup PG and Mysql databases through their client or docker docker-container.
+
+## Installation and usage
+### Installation
+*db-backups* requires pipenv
 ```shell script
 sudo pip install pipenv
 ```
 
-### Installation
 ```shell script
 git clone [repository_url] <path_to_project>
-cd <project_dir>
+cd <path_to_project>
 pipenv install
 
 cp src/settings_local.py.template src/settings_local.py
 nano src/settings_local.py # modify needed variables
 ```
+
+### Usage
+
+### Run manually 
+To get started right away (from docker container and upload to YandexDisc):
+```shell script
+cd <path_to_project>
+pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --yandex
+```
+
+### Command line options
+```text
+usage: run.py [-h] [--handler BACKUP_HANDLER] [--container CONTAINER]
+              [--yandex] [--yandex_directory YANDEX_DIRECTORY]
+              [--local_directory LOCAL_DIRECTORY]
+              Database Name
+
+positional arguments:
+  Database Name         Database name for backup
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --handler BACKUP_HANDLER
+                        Required handler for backup (['mysql', 'postgres',
+                        'docker_postgres'])
+  --container CONTAINER
+                        If using docker_* handler. You should define db-source
+                        container
+  --yandex              Send backup to YandexDisk
+  --yandex_directory YANDEX_DIRECTORY
+                        If using --yandex, you can define this attribute
+  --local_directory LOCAL_DIRECTORY
+                        Local directory for saving backups
+
+```
+
 
 ### ENV configuration
 ```shell script
@@ -26,16 +65,10 @@ nano .env  # set requiered variables
 ```shell script
 cd <path_to_project>
 cp run.sh.template run.sh
-chmod a+x run.sh
+chmod +x run.sh
 nano run.sh  # add your custom runs
 crontab -e
-0 0 * * * admin <path_to_project>/.run.sh  # every night at 00:00
-```
-
-### RUN manually (from docker container and upload to YandexDisc)
-```shell script
-cd <path_to_project>
-pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --yandex
+0 2 * * * cd <path_to_project> && /.run.sh >> /var/log/db_backups.cron.log 2>&1 # every night at 02:00
 ```
 
 ### Get help
