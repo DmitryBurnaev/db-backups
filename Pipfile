@@ -18,4 +18,4 @@ flake8 = "==3.7.8"
 ipython = "==7.5.0"
 
 [requires]
-python_version = "3.7.4"
+python_version = "3.7"
