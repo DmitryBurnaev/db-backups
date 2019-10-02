@@ -1,7 +1,7 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-LOG_DIR = os.getenv("LOG_DIRECTORY", os.path.join(BASE_DIR, "log"))
+LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "log"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 YANDEX_TOKEN = os.getenv("YANDEX_TOKEN")
