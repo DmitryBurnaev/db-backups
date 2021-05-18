@@ -59,6 +59,7 @@ if __name__ == "__main__":
         default=None,
         help="If using --yandex, you can define this attribute",
     )
+    p.add_argument("--s3", default=False, action="store_true", help="Send backup to S3 storage")
     p.add_argument(
         "--local_directory", type=str, default=None, help="Local directory for saving backups"
     )

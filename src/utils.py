@@ -59,6 +59,27 @@ def upload_backup(db_name: str, backup_path: str, filename: str, yandex_director
         logger.info(f"Great! uploading for [{db_name}] was done!")
 
 
+def upload_to_s3(db_name: str, backup_path: str, filename: str, yandex_directory: str = None):
+    """ Allows to upload src_filename to S3 storage """
+    session = boto3.session.Session(
+        aws_access_key_id=settings.S3_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.S3_AWS_SECRET_ACCESS_KEY,
+        region_name="ru-central1",
+    )
+
+    yandex_client = YandexDiskClient(settings.YANDEX_TOKEN)
+    yandex_directory = yandex_directory or create_backup_directory(yandex_client, db_name)
+    dst_filename = os.path.join(yandex_directory, filename)
+
+    try:
+        logger.info("Uploading file {} to {} server".format(backup_path, dst_filename))
+        yandex_client.upload(backup_path, dst_filename)
+    except YANDEX_EXCEPTIONS:
+        logger.exception("Shit! We could not upload actual backup to YandexDisk")
+    else:
+        logger.info(f"Great! uploading for [{db_name}] was done!")
+
+
 def call_with_logging(command: str):
     """ Call command, detect error and logging
 
