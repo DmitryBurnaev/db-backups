@@ -20,6 +20,11 @@ PG_VERSION = os.getenv("PG_VERSION", "9.6.5")
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = os.getenv("PG_PORT", "5432")
 
+PG_PORT = os.getenv("PG_PORT", "5432")
+PG_PORT = os.getenv("PG_PORT", "5432")
+PG_PORT = os.getenv("PG_PORT", "5432")
+PG_PORT = os.getenv("PG_PORT", "5432")
+
 
 # override global settings
 if not os.path.isdir(LOG_DIR):
