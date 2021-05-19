@@ -20,11 +20,12 @@ PG_VERSION = os.getenv("PG_VERSION", "9.6.5")
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = os.getenv("PG_PORT", "5432")
 
-PG_PORT = os.getenv("PG_PORT", "5432")
-PG_PORT = os.getenv("PG_PORT", "5432")
-PG_PORT = os.getenv("PG_PORT", "5432")
-PG_PORT = os.getenv("PG_PORT", "5432")
-
+S3_REGION_NAME = os.getenv("S3_REGION_NAME")
+S3_STORAGE_URL = os.getenv("S3_STORAGE_URL")
+S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+S3_DST_PATH = os.getenv("S3_DST_PATH")
 
 # override global settings
 if not os.path.isdir(LOG_DIR):
