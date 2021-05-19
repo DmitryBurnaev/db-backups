@@ -9,7 +9,7 @@ verify_ssl = true
 name = "pypi-devpython"
 
 [packages]
-yandex_disk_client = {version = "==0.1.0", index="pypi-devpython"}
+yandex_disk = {version = "==0.1.0", index="pypi-devpython"}
 sentry-sdk = "==0.12.2"
 boto3 = "==1.17.74"
 
