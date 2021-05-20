@@ -1,8 +1,12 @@
+import mimetypes
 import os
 import logging
 import subprocess
 from datetime import datetime
+from urllib.parse import urljoin
 
+import boto3
+from botocore import exceptions as s3_exceptions
 from yandex_disk_client.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
 from yandex_disk_client.rest_client import YandexDiskClient
 
@@ -57,6 +61,39 @@ def upload_backup(db_name: str, backup_path: str, filename: str, yandex_director
         logger.exception("Shit! We could not upload actual backup to YandexDisk")
     else:
         logger.info(f"Great! uploading for [{db_name}] was done!")
+
+
+def upload_to_s3(db_name: str, backup_path: str, filename: str):
+    """ Allows to upload src_filename to S3 storage """
+
+    session = boto3.session.Session(
+        aws_access_key_id=settings.S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+        region_name=settings.S3_REGION_NAME,
+    )
+    s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
+    mimetype, _ = mimetypes.guess_type(backup_path)
+    dst_path = os.path.join(settings.S3_DST_PATH, filename)
+    try:
+        logger.info("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
+        s3.upload_file(
+            Filename=backup_path,
+            Bucket=settings.S3_BUCKET_NAME,
+            Key=dst_path,
+            ExtraArgs={"ContentType": mimetype},
+        )
+
+    except s3_exceptions.ClientError as error:
+        logger.exception("Couldn't execute request (upload) to S3: ClientError %s", str(error),)
+
+    except Exception as error:
+        logger.exception("Shit! We couldn't execute upload to S3: %s", error)
+
+    else:
+        result_url = urljoin(
+            settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path)
+        )
+        logger.info("Great! uploading for [%s] was done! \n result: %s", db_name, result_url)
 
 
 def call_with_logging(command: str):
