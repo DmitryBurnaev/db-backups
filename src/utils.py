@@ -6,7 +6,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 
 import boto3
-import botocore
+from botocore import exceptions as s3_exceptions
 from yandex_disk_client.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
 from yandex_disk_client.rest_client import YandexDiskClient
 
@@ -63,7 +63,7 @@ def upload_backup(db_name: str, backup_path: str, filename: str, yandex_director
         logger.info(f"Great! uploading for [{db_name}] was done!")
 
 
-def upload_to_s3(db_name: str, backup_path: str, filename: str, yandex_directory: str = None):
+def upload_to_s3(db_name: str, backup_path: str, filename: str):
     """ Allows to upload src_filename to S3 storage """
 
     session = boto3.session.Session(
@@ -80,10 +80,10 @@ def upload_to_s3(db_name: str, backup_path: str, filename: str, yandex_directory
             Filename=backup_path,
             Bucket=settings.S3_BUCKET_NAME,
             Key=dst_path,
-            ExtraArgs={"ACL": "read-write", "ContentType": mimetype},
+            ExtraArgs={"ContentType": mimetype},
         )
 
-    except botocore.exceptions.ClientError as error:
+    except s3_exceptions.ClientError as error:
         logger.exception("Couldn't execute request (upload) to S3: ClientError %s", str(error),)
 
     except Exception as error:
