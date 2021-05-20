@@ -1,6 +1,6 @@
 <h2 align="center">Simple backup databases to local directory and Yandex disk (optional)</h2>
 
-Allows to backup PG and Mysql databases through their client or docker docker-container.
+Allows to back up PG and Mysql databases through their client or docker docker-container.
 
 ## Installation and usage
 ### Installation
@@ -48,6 +48,7 @@ optional arguments:
   --yandex              Send backup to YandexDisk
   --yandex_directory YANDEX_DIRECTORY
                         If using --yandex, you can define this attribute
+  --s3                  Send backup to S3 storage                        
   --local_directory LOCAL_DIRECTORY
                         Local directory for saving backups
 
@@ -90,23 +91,27 @@ https://oauth.yandex.ru/authorize?response_type=token&client_id=<client-id>
 ```
 
 | ARGUMENT | DESCRIPTION | EXAMPLE | DEFAULT |
-|:----------------- |:-----------------------------------------:|:-----------------------:|:-------------------------:|
-| LOG_LEVEL         | Current logging level                     | DEBUG                   | INFO                      |    
-| YANDEX_TOKEN      | Token for uploading backup to YandexDisc  | 12312312312312312312    |                           |
-| YANDEX_BACKUP_DIR | Default directory in your YandexDisc      | /project_backups/       | /backups/                 |
-| LOCAL_BACKUP_DIR  | Default directory for local backup        | /home/user/backups      | <path_to_project>/backups/|
-| LOG_DIR           | Default directory for log files           | /home/user/logs         | <path_to_project>/logs/   |
-| SENTRY_DSN        | Sentry DSN (exception streaming)          | 123:456@setry.site.ru/1 |                           |
-| MYSQL_HOST        | It is used for connecting to MySQL server | localhost               | localhost                 |
-| MYSQL_PORT        | It is used for connecting to MySQL server | 3306                    | 3306                      |
-| MYSQL_USER        | It is used for connecting to MySQL server | user                    | root                      |
-| MYSQL_PASSWORD    | It is used for connecting to MySQL server | password                | password                  |
-| PG_HOST           | It is used for connecting to PG server    | localhost               | localhost                 |
-| PG_PORT           | It is used for connecting to PG server    | 5432                    | 5432                      |
-| PG_VERSION        | It is used for connecting to PG server    | 9.6.5                   | 9.6.5                     |
-| PG_USER           | It is used for connecting to PG server    | user                    | postgres                  |
-| PG_PASSWORD       | It is used for connecting to PG server    | password                | password                  |
-
+|:-------------------- |:-----------------------------------------:|:-----------------------:|:-------------------------:|
+| LOG_LEVEL            | Current logging level                     | DEBUG                   | INFO                      |    
+| YANDEX_TOKEN         | Token for uploading backup to YandexDisc  | 12312312312312312312    |                           |
+| YANDEX_BACKUP_DIR    | Default directory in your YandexDisc      | /project_backups/       | /backups/                 |
+| LOCAL_BACKUP_DIR     | Default directory for local backup        | /home/user/backups      | <path_to_project>/backups/|
+| LOG_DIR              | Default directory for log files           | /home/user/logs         | <path_to_project>/logs/   |
+| SENTRY_DSN           | Sentry DSN (exception streaming)          | 123:456@setry.site.ru/1 |                           |
+| MYSQL_HOST           | It is used for connecting to MySQL server | localhost               | localhost                 |
+| MYSQL_PORT           | It is used for connecting to MySQL server | 3306                    | 3306                      |
+| MYSQL_USER           | It is used for connecting to MySQL server | user                    | root                      |
+| MYSQL_PASSWORD       | It is used for connecting to MySQL server | password                | password                  |
+| PG_HOST              | It is used for connecting to PG server    | localhost               | localhost                 |
+| PG_PORT              | It is used for connecting to PG server    | 5432                    | 5432                      |
+| PG_VERSION           | It is used for connecting to PG server    | 9.6.5                   | 9.6.5                     |
+| PG_USER              | It is used for connecting to PG server    | user                    | postgres                  |
+| PG_PASSWORD          | It is used for connecting to PG server    | password                | password                  |
+| S3_STORAGE_URL       | URL to S3-like file storage               | https://storage.s3.net/ |                           |
+| S3_ACCESS_KEY_ID     | Public key to S3 storage                  |                         |                           |
+| S3_SECRET_ACCESS_KEY | Secret key to S3 storage                  |                         |                           |
+| S3_BUCKET_NAME       | S3 bucket                                 |                         |                           |
+| S3_DST_PATH          | S3 dir for generated RSS feeds            | files                   |                           |
 
 * * *
 

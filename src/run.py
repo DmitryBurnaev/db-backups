@@ -21,7 +21,7 @@ import sentry_sdk
 from src import settings
 from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
 from src.settings import LOGGING
-from src.utils import upload_backup
+from src.utils import upload_backup, upload_to_s3
 
 YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
@@ -59,6 +59,7 @@ if __name__ == "__main__":
         default=None,
         help="If using --yandex, you can define this attribute",
     )
+    p.add_argument("--s3", default=False, action="store_true", help="Send backup to S3 storage")
     p.add_argument(
         "--local_directory", type=str, default=None, help="Local directory for saving backups"
     )
@@ -89,6 +90,13 @@ if __name__ == "__main__":
             backup_path=backup_full_path,
             filename=backup_filename,
             yandex_directory=args.yandex_directory,
+        )
+
+    if args.s3:
+        upload_to_s3(
+            db_name=args.db_name,
+            backup_path=backup_full_path,
+            filename=backup_filename,
         )
 
     logger.info(f"---- [{args.db_name}] BACKUP SUCCESS ----")
