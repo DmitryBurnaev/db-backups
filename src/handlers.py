@@ -52,7 +52,7 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
 
     backup_filename = get_filename(db_name, prefix="postgres")
     backup_full_path = os.path.join(target_path, backup_filename)
-    tmp_filename = f"/tmp/mysql_backup_{db_name}_{datetime.now().timestamp()}.sql"
+    tmp_filename = f"/tmp/postgres_backup_{db_name}_{datetime.now().timestamp()}.sql"
 
     command_kwargs = {
         "pg_version": settings.PG_VERSION,
