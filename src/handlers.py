@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 from src import settings
-from src.utils import call_with_logging, get_filename
+from src.utils import call_with_logging, get_filename, BackupError
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
 
     if not all(
         [
-            settings.PG_VERSION,
+            settings.PG_DUMP,
             settings.PG_HOST,
             settings.PG_PORT,
             settings.PG_USER,
@@ -55,7 +55,7 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
     tmp_filename = f"/tmp/postgres_backup_{db_name}_{datetime.now().timestamp()}.sql"
 
     command_kwargs = {
-        "pg_version": settings.PG_VERSION,
+        "pg_dump": settings.PG_DUMP,
         "host": settings.PG_HOST,
         "port": settings.PG_PORT,
         "user": settings.PG_USER,
@@ -66,13 +66,14 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
     }
 
     command = (
-        'PGPASSWORD="{u_pass}" '
-        "/usr/lib/postgresql/{pg_version}/bin/pg_dump -Fc -x -O "
-        "-h {host} -p {port} -U {u_name} -d {db_name} > {tmp_filename} "
+        'PGPASSWORD="{password}" '
+        "{pg_dump} -h {host} -p {port} -U {user} -d {db_name} -f {tmp_filename}"
         "&& tar -cvzf {backup_full_path} {tmp_filename} && rm {tmp_filename}"
     ).format(**command_kwargs)
+    stdout = call_with_logging(command=command)
+    if not os.path.exists(backup_full_path):
+        raise BackupError(f"Backup wasn't created (result file not found). \n{stdout}")
 
-    call_with_logging(command=command)
     logger.info("Backup {}: Success!".format(db_name))
     return backup_filename, backup_full_path
 

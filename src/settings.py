@@ -16,7 +16,7 @@ MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "password")
 
 PG_USER = os.getenv("PG_USER", "postgres")
 PG_PASSWORD = os.getenv("PG_PASSWORD", "password")
-PG_VERSION = os.getenv("PG_VERSION", "9.6.5")
+PG_DUMP = os.getenv("PG_DUMP", "pg_dump")  # or specific /usr/lib/postgresql/{ver}/pg_dump
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = os.getenv("PG_PORT", "5432")
 
@@ -30,6 +30,9 @@ S3_DST_PATH = os.getenv("S3_DST_PATH")
 # override global settings
 if not os.path.isdir(LOG_DIR):
     os.mkdir(LOG_DIR)
+
+if not os.path.isdir(LOCAL_BACKUP_DIR):
+    os.mkdir(LOCAL_BACKUP_DIR)
 
 LOGGING = {
     "version": 1,
