@@ -105,7 +105,7 @@ def call_with_logging(command: str):
 
     """
 
-    logger.info(f"Call command [{command}] ... ")
+    logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b""
