@@ -15,7 +15,7 @@ import argparse
 import logging
 from logging import config
 
-from yandex_disk_client.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
+from yandex_disk.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
 import sentry_sdk
 
 from src import settings

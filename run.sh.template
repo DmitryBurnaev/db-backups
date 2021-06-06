@@ -1,3 +1,11 @@
 #!/bin/sh
 PATH="$PATH:/usr/local/bin"
-pipenv run python -m src.run test_db --handler docker_postgres --container postgres --yandex
+# run with local interpreter
+pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --yandex
+
+
+# run via docker (and upload to S3)
+docker-compose up --build
+docker-compose run \
+  --volume /var/backups:/backups/backups \
+  backup python -m src.run <DB_NAME> --handler postgres --container postgres --s3
