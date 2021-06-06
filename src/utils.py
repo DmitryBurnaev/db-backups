@@ -7,8 +7,8 @@ from urllib.parse import urljoin
 
 import boto3
 from botocore import exceptions as s3_exceptions
-from yandex_disk_client.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
-from yandex_disk_client.rest_client import YandexDiskClient
+from yandex_disk.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
+from yandex_disk.rest_client import YandexDiskClient
 
 from src import settings
 
@@ -105,7 +105,7 @@ def call_with_logging(command: str):
 
     """
 
-    logger.debug(f"Call command [{command}] ... ")
+    logger.info(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b""
@@ -116,6 +116,8 @@ def call_with_logging(command: str):
 
     elif output:
         logger.debug(output.strip())
+
+    return output
 
 
 def get_filename(db_name: str, prefix: str) -> str:

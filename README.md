@@ -14,8 +14,8 @@ git clone [repository_url] <path_to_project>
 cd <path_to_project>
 pipenv install
 
-cp src/settings_local.py.template src/settings_local.py
-nano src/settings_local.py # modify needed variables
+cp .env.template .env
+nano .env # modify needed variables
 ```
 
 ### Usage
@@ -25,6 +25,20 @@ To get started right away (from docker container and upload to YandexDisc):
 ```shell script
 cd <path_to_project>
 pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --yandex
+```
+
+### Run postgres backup via docker (local backup only)
+To store backup on host's directory
+```shell script
+docker-compose up --build
+docker-compose run --volume <YOUR_DIR>:/backups/backups backup python -m src.run <DB_NAME> --handler postgres 
+```
+
+### Run postgres backup via docker (s3 backup)
+To run backup process from docker with db-backup service
+```shell script
+docker-compose up --build
+docker-compose run backup python -m src.run <DB_NAME> --handler postgres  --s3
 ```
 
 ### Command line options
@@ -59,7 +73,7 @@ optional arguments:
 ```shell script
 cd <path_to_project>
 cp .env.template .env
-nano .env  # set requiered variables
+nano .env  # set required variables
 ```
 
 ### RUN configuration (periodical running) 
@@ -104,7 +118,7 @@ https://oauth.yandex.ru/authorize?response_type=token&client_id=<client-id>
 | MYSQL_PASSWORD       | It is used for connecting to MySQL server | password                | password                  |
 | PG_HOST              | It is used for connecting to PG server    | localhost               | localhost                 |
 | PG_PORT              | It is used for connecting to PG server    | 5432                    | 5432                      |
-| PG_VERSION           | It is used for connecting to PG server    | 9.6.5                   | 9.6.5                     |
+| PG_DUMP              | 'pg_dump' or link to pg_dump's binary     | pg_dump                 | pg_dump                   |
 | PG_USER              | It is used for connecting to PG server    | user                    | postgres                  |
 | PG_PASSWORD          | It is used for connecting to PG server    | password                | password                  |
 | S3_STORAGE_URL       | URL to S3-like file storage               | https://storage.s3.net/ |                           |
