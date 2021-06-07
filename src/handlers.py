@@ -52,7 +52,6 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
 
     backup_filename = get_filename(db_name, prefix="postgres")
     backup_full_path = os.path.join(target_path, backup_filename)
-    tmp_filename = f"/tmp/postgres_backup_{db_name}_{datetime.now().timestamp()}.sql"
 
     command_kwargs = {
         "pg_dump": settings.PG_DUMP,
@@ -62,7 +61,7 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
         "password": settings.PG_PASSWORD,
         "db_name": db_name,
         "backup_full_path": backup_full_path,
-        "tmp_filename": tmp_filename,
+        "tmp_filename": f"{db_name}.sql",
     }
 
     command = (
