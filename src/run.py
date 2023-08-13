@@ -15,15 +15,16 @@ import argparse
 import logging
 from logging import config
 
-from yandex_disk.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
+# from yandex_disk.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
 import sentry_sdk
 
 from src import settings
 from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
 from src.settings import LOGGING
-from src.utils import upload_backup, upload_to_s3
+from src.utils import upload_to_s3
+# from src.utils import upload_backup, upload_to_s3
 
-YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
+# YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
@@ -85,12 +86,13 @@ if __name__ == "__main__":
         exit(2)
 
     if args.yandex:
-        upload_backup(
-            db_name=args.db_name,
-            backup_path=backup_full_path,
-            filename=backup_filename,
-            yandex_directory=args.yandex_directory,
-        )
+        raise NotImplementedError("cant upload to ya disk")
+        # upload_backup(
+        #     db_name=args.db_name,
+        #     backup_path=backup_full_path,
+        #     filename=backup_filename,
+        #     yandex_directory=args.yandex_directory,
+        # )
 
     if args.s3:
         upload_to_s3(
