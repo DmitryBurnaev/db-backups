@@ -3,13 +3,7 @@ url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-[[source]]
-url = "https://pypi.devpython.ru"
-verify_ssl = true
-name = "pypi-devpython"
-
 [packages]
-yandex_disk = {version = "==0.1.0", index="pypi-devpython"}
 sentry-sdk = "==1.38.0"
 boto3 = "==1.33.11"
 
