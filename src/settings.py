@@ -4,8 +4,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "log"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-YANDEX_TOKEN = os.getenv("YANDEX_TOKEN")
-YANDEX_BACKUP_DIR = os.getenv("YANDEX_BACKUP_DIR", "/backups/")
 LOCAL_BACKUP_DIR = os.getenv("LOCAL_BACKUP_DIR", os.path.join(BASE_DIR, "backups"))
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
