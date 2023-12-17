@@ -4,7 +4,7 @@ This module helps to run backup process
     handler
 keyword arguments:
     --container_name: Name of running container for target DB
-    --yandex: upload to YandexDisk (using `settings.YANDEX_TOKEN` and "yandex-disk-client" lib)
+    --s3: upload to S3-like storage
 
 You can get additional information by using:
 $ python3 -m src.run --help
@@ -15,15 +15,13 @@ import argparse
 import logging
 from logging import config
 
-from yandex_disk.exceptions import YaDiskInvalidResultException, YaDiskInvalidStatusException
 import sentry_sdk
 
 from src import settings
 from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
 from src.settings import LOGGING
-from src.utils import upload_backup, upload_to_s3
+from src.utils import upload_to_s3
 
-YANDEX_EXCEPTIONS = YaDiskInvalidResultException, YaDiskInvalidStatusException
 
 logging.config.dictConfig(LOGGING)
 logger = logging.getLogger(__name__)
@@ -52,13 +50,6 @@ if __name__ == "__main__":
         type=str,
         help="If using docker_* handler. You should define db-source container",
     )
-    p.add_argument("--yandex", default=False, action="store_true", help="Send backup to YandexDisk")
-    p.add_argument(
-        "--yandex_directory",
-        type=str,
-        default=None,
-        help="If using --yandex, you can define this attribute",
-    )
     p.add_argument("--s3", default=False, action="store_true", help="Send backup to S3 storage")
     p.add_argument(
         "--local_directory", type=str, default=None, help="Local directory for saving backups"
@@ -83,14 +74,6 @@ if __name__ == "__main__":
     except Exception as err:
         logger.exception(f"---- [{args.db_name}] BACKUP FAILED!!! ---- \n Error: {err}")
         exit(2)
-
-    if args.yandex:
-        upload_backup(
-            db_name=args.db_name,
-            backup_path=backup_full_path,
-            filename=backup_filename,
-            yandex_directory=args.yandex_directory,
-        )
 
     if args.s3:
         upload_to_s3(

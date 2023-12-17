@@ -1,4 +1,4 @@
-<h2 align="center">Simple backup databases to local directory and Yandex disk (optional)</h2>
+<h2 align="center">Simple backup databases to local directory and upload S3-storage (optional)</h2>
 
 Allows to back up PG and Mysql databases through their client or docker docker-container.
 
@@ -24,7 +24,7 @@ nano .env # modify needed variables
 To get started right away (from docker container and upload to YandexDisc):
 ```shell script
 cd <path_to_project>
-pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --yandex
+pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --s3
 ```
 
 ### Run postgres backup via docker (local backup only)
@@ -44,7 +44,6 @@ docker-compose run backup python -m src.run <DB_NAME> --handler postgres  --s3
 ### Command line options
 ```text
 usage: run.py [-h] [--handler BACKUP_HANDLER] [--container CONTAINER]
-              [--yandex] [--yandex_directory YANDEX_DIRECTORY]
               [--local_directory LOCAL_DIRECTORY]
               Database Name
 
@@ -59,9 +58,6 @@ optional arguments:
   --container CONTAINER
                         If using docker_* handler. You should define db-source
                         container
-  --yandex              Send backup to YandexDisk
-  --yandex_directory YANDEX_DIRECTORY
-                        If using --yandex, you can define this attribute
   --s3                  Send backup to S3 storage                        
   --local_directory LOCAL_DIRECTORY
                         Local directory for saving backups
@@ -98,17 +94,10 @@ pipenv run python -m src.run --help
 Environment variables can be set manually or by updating `<path_to_project>/.env` file. 
 Note, variables from this file can't rewrite variables which are set manually 
 
-#### Obtaining YANDEX_TOKEN
-```shell script
-# follow the link
-https://oauth.yandex.ru/authorize?response_type=token&client_id=<client-id>
-```
 
 | ARGUMENT             |                DESCRIPTION                |         EXAMPLE         |           DEFAULT          |
 |:---------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
 | LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
-| YANDEX_TOKEN         | Token for uploading backup to YandexDisc  |  12312312312312312312   |                            |
-| YANDEX_BACKUP_DIR    |   Default directory in your YandexDisc    |    /project_backups/    |         /backups/          |
 | LOCAL_BACKUP_DIR     |    Default directory for local backup     |   /home/user/backups    | <path_to_project>/backups/ |
 | LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
 | SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
