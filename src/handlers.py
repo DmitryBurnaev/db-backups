@@ -7,6 +7,8 @@ from src import settings
 from src.utils import call_with_logging, get_filename, BackupError
 
 logger = logging.getLogger(__name__)
+ARCHIVE_COMMAND = "tar -cvzf {backup_full_path} {tmp_filename}"
+CLEAN_DIR_COMMAND = "rm {tmp_filename}"
 
 
 def backup_mysql(db_name: str, target_path: str, **_) -> Optional[Tuple[str, str]]:
@@ -64,11 +66,18 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
         "tmp_filename": f"{db_name}.sql",
     }
 
-    command = (
+    pg_dump_command = (
         'PGPASSWORD="{password}" '
         "{pg_dump} -h {host} -p {port} -U {user} -d {db_name} -f {tmp_filename}"
-        "&& tar -cvzf {backup_full_path} {tmp_filename} && rm {tmp_filename}"
     ).format(**command_kwargs)
+    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+    clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
+
+    command = (
+        f"{pg_dump_command} && "
+        f"{archive_command} && "
+        f"{clean_command}"
+    )
     stdout = call_with_logging(command=command)
     if not os.path.exists(backup_full_path):
         raise BackupError(f"Backup wasn't created (result file not found). \n{stdout}")
@@ -83,17 +92,28 @@ def backup_postgres_from_docker(db_name, target_path, container_name) -> Optiona
     logger.info(f"Backup [docker-postgres] {db_name} ... ")
 
     backup_filename = get_filename(db_name, prefix="postgres")
-    backup_full_path = os.path.join(target_path, backup_filename)
+    backup_result_path = os.path.join(target_path, backup_filename)
+    backup_in_container_path = f"/tmp/{db_name}.tar.gz"
+
+    command_kwargs = {
+        "db_name": db_name,
+        "backup_full_path": backup_in_container_path,
+        "tmp_filename": f"/tmp/{db_name}.sql",
+    }
+    pg_dump_command = "pg_dump -f {tmp_filename} -d {db_name} -U postgres ".format(**command_kwargs)
+    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+    clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
     sh_command = (
-        f"cd /tmp && pg_dump -f ./{db_name}.sql -d {db_name} -U postgres "
-        f"&& tar -cvzf {db_name}.tar.gz {db_name}.sql && rm {db_name}.sql"
+        f"{pg_dump_command} && "
+        f"{archive_command} && "
+        f"{clean_command}"
     )
     docker_command = f'docker exec -t {container_name} sh -c "{sh_command}"'
-    copy_file_command = f"docker cp {container_name}:/tmp/{db_name}.tar.gz {backup_full_path}"
+    copy_file_command = f"docker cp {container_name}:{backup_in_container_path} {backup_result_path}"
 
     call_with_logging(command=docker_command)
     call_with_logging(command=copy_file_command)
 
     logger.info("Backup {}: Success!".format(db_name))
-    return backup_filename, backup_full_path
+    return backup_filename, backup_result_path
