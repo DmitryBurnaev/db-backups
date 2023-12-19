@@ -8,10 +8,14 @@ from src.utils import call_with_logging, get_filename, BackupError
 
 logger = logging.getLogger(__name__)
 ARCHIVE_COMMAND = "tar -cvzf {backup_full_path} {tmp_filename}"
+ARCHIVE_ENCR_COMMAND = (
+    "tar -cvzf {backup_full_path} "
+    "| openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -e > {tmp_filename}"
+)
 CLEAN_DIR_COMMAND = "rm {tmp_filename}"
 
 
-def backup_mysql(db_name: str, target_path: str, **_) -> Optional[Tuple[str, str]]:
+def backup_mysql(db_name: str, target_path: str, **_) -> tuple[str, str] | None:
     """ Backup mysql from mysql server (via mysqldump) """
 
     logger.info(f"Backup [mysql] {db_name} ... ")
@@ -35,7 +39,7 @@ def backup_mysql(db_name: str, target_path: str, **_) -> Optional[Tuple[str, str
     return backup_filename, backup_full_path
 
 
-def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
+def backup_postgres(db_name: str, target_path: str, encrypt: bool = False, **_) -> tuple[str, str] | None:
     """ Backup PG database from postgres server (via pg_dump) """
 
     logger.info(f"Backup [postgres]  {db_name} ... ")
@@ -70,7 +74,11 @@ def backup_postgres(db_name, target_path, **_) -> Optional[Tuple[str, str]]:
         'PGPASSWORD="{password}" '
         "{pg_dump} -h {host} -p {port} -U {user} -d {db_name} -f {tmp_filename}"
     ).format(**command_kwargs)
-    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+    if encrypt:
+        archive_command = ARCHIVE_ENCR_COMMAND.format(**command_kwargs)
+    else:
+        archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+
     clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
     command = (
