@@ -24,7 +24,7 @@ class BackupError(Exception):
 
 
 def upload_to_s3(db_name: str, backup_path: str, filename: str):
-    """ Allows to upload src_filename to S3 storage """
+    """Allows to upload src_filename to S3 storage"""
 
     session = boto3.session.Session(
         aws_access_key_id=settings.S3_ACCESS_KEY_ID,
@@ -44,7 +44,10 @@ def upload_to_s3(db_name: str, backup_path: str, filename: str):
         )
 
     except s3_exceptions.ClientError as error:
-        logger.exception("Couldn't execute request (upload) to S3: ClientError %s", str(error),)
+        logger.exception(
+            "Couldn't execute request (upload) to S3: ClientError %s",
+            str(error),
+        )
 
     except Exception as error:
         logger.exception("Shit! We couldn't execute upload to S3: %s", error)
@@ -57,7 +60,7 @@ def upload_to_s3(db_name: str, backup_path: str, filename: str):
 
 
 def call_with_logging(command: str):
-    """ Call command, detect error and logging
+    """Call command, detect error and logging
 
     :param command: command that need to be called
     :return: True - not found errors. False - errors founded
@@ -81,6 +84,6 @@ def call_with_logging(command: str):
 
 
 def get_filename(db_name: str, prefix: str) -> str:
-    """ Allows to get result name of backup file """
+    """Allows to get result name of backup file"""
 
     return f"{datetime.now():%Y-%m-%d}.{db_name}.{prefix}-backup.tar.gz"

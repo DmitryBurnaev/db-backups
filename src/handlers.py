@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime
-from typing import Optional, Tuple
+from pathlib import Path
 
 from src import settings
 from src.utils import call_with_logging, get_filename, BackupError
@@ -16,7 +16,7 @@ CLEAN_DIR_COMMAND = "rm {tmp_filename}"
 
 
 def backup_mysql(db_name: str, target_path: str, **_) -> tuple[str, str] | None:
-    """ Backup mysql from mysql server (via mysqldump) """
+    """Backup mysql from mysql server (via mysqldump)"""
 
     logger.info(f"Backup [mysql] {db_name} ... ")
     if not all(
@@ -39,8 +39,13 @@ def backup_mysql(db_name: str, target_path: str, **_) -> tuple[str, str] | None:
     return backup_filename, backup_full_path
 
 
-def backup_postgres(db_name: str, target_path: str, encrypt: bool = False, **_) -> tuple[str, str] | None:
-    """ Backup PG database from postgres server (via pg_dump) """
+def backup_postgres(
+    db_name: str,
+    target_path: str,
+    encrypt: bool = False,
+    **_,
+) -> tuple[str, str] | None:
+    """Backup PG database from postgres server (via pg_dump)"""
 
     logger.info(f"Backup [postgres]  {db_name} ... ")
 
@@ -81,11 +86,7 @@ def backup_postgres(db_name: str, target_path: str, encrypt: bool = False, **_) 
 
     clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
-    command = (
-        f"{pg_dump_command} && "
-        f"{archive_command} && "
-        f"{clean_command}"
-    )
+    command = f"{pg_dump_command} && " f"{archive_command} && " f"{clean_command}"
     stdout = call_with_logging(command=command)
     if not os.path.exists(backup_full_path):
         raise BackupError(f"Backup wasn't created (result file not found). \n{stdout}")
@@ -94,8 +95,13 @@ def backup_postgres(db_name: str, target_path: str, encrypt: bool = False, **_) 
     return backup_filename, backup_full_path
 
 
-def backup_postgres_from_docker(db_name, target_path, container_name) -> Optional[Tuple[str, str]]:
-    """Allows to backup postgres db from docker-based postgres server """
+def backup_postgres_from_docker(
+    db_name: str,
+    target_path: str | Path,
+    container_name: str,
+    encrypt: bool = False,
+) -> tuple[str, str] | None:
+    """Allows to backup postgres db from docker-based postgres server"""
 
     logger.info(f"Backup [docker-postgres] {db_name} ... ")
 
@@ -109,16 +115,17 @@ def backup_postgres_from_docker(db_name, target_path, container_name) -> Optiona
         "tmp_filename": f"/tmp/{db_name}.sql",
     }
     pg_dump_command = "pg_dump -f {tmp_filename} -d {db_name} -U postgres ".format(**command_kwargs)
-    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+    if encrypt:
+        archive_command = ARCHIVE_ENCR_COMMAND.format(**command_kwargs)
+    else:
+        archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
     clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
-    sh_command = (
-        f"{pg_dump_command} && "
-        f"{archive_command} && "
-        f"{clean_command}"
-    )
+    sh_command = f"{pg_dump_command} && " f"{archive_command} && " f"{clean_command}"
     docker_command = f'docker exec -t {container_name} sh -c "{sh_command}"'
-    copy_file_command = f"docker cp {container_name}:{backup_in_container_path} {backup_result_path}"
+    copy_file_command = (
+        f"docker cp {container_name}:{backup_in_container_path} {backup_result_path}"
+    )
 
     call_with_logging(command=docker_command)
     call_with_logging(command=copy_file_command)
