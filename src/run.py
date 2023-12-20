@@ -34,7 +34,6 @@ HANDLERS = {
 
 
 if __name__ == "__main__":
-
     p = argparse.ArgumentParser()
     p.add_argument("db_name", metavar="Database Name", type=str, help="Database name for backup")
 
