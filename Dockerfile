@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster
+FROM python:3.12-slim-bookworm
 WORKDIR /backups
 
 COPY Pipfile /backups
@@ -16,8 +16,8 @@ RUN apt-get update \
 	&& sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt buster-pgdg main" > /etc/apt/sources.list.d/pgdg.list' \
 	&& wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
 	&& apt-get update \
-	&& apt-get install -y postgresql-client-13 \
-	&& pip install pipenv==2021.5.29 \
+	&& apt-get install -y postgresql-client-15 \
+	&& pip install pipenv==2023.11.15 \
 	&& pipenv install --system \
 	&& apt-get purge -y --auto-remove gcc python-dev \
 	&& apt-get -y autoremove \

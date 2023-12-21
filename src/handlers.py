@@ -8,10 +8,6 @@ from src.utils import call_with_logging, get_filename, BackupError
 
 logger = logging.getLogger(__name__)
 ARCHIVE_COMMAND = "tar -cvzf {backup_full_path} {tmp_filename}"
-ARCHIVE_ENCR_COMMAND = (
-    "tar -cvzf {backup_full_path} "
-    "| openssl enc -aes-256-cbc -pbkdf2 -iter 10000 -e > {tmp_filename}"
-)
 CLEAN_DIR_COMMAND = "rm {tmp_filename}"
 
 
@@ -42,7 +38,6 @@ def backup_mysql(db_name: str, target_path: str, **_) -> tuple[str, str] | None:
 def backup_postgres(
     db_name: str,
     target_path: str,
-    encrypt: bool = False,
     **_,
 ) -> tuple[str, str] | None:
     """Backup PG database from postgres server (via pg_dump)"""
@@ -79,11 +74,7 @@ def backup_postgres(
         'PGPASSWORD="{password}" '
         "{pg_dump} -h {host} -p {port} -U {user} -d {db_name} -f {tmp_filename}"
     ).format(**command_kwargs)
-    if encrypt:
-        archive_command = ARCHIVE_ENCR_COMMAND.format(**command_kwargs)
-    else:
-        archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
-
+    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
     clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
     command = f"{pg_dump_command} && " f"{archive_command} && " f"{clean_command}"
@@ -99,7 +90,6 @@ def backup_postgres_from_docker(
     db_name: str,
     target_path: str | Path,
     container_name: str,
-    encrypt: bool = False,
 ) -> tuple[str, str] | None:
     """Allows to backup postgres db from docker-based postgres server"""
 
@@ -115,10 +105,7 @@ def backup_postgres_from_docker(
         "tmp_filename": f"/tmp/{db_name}.sql",
     }
     pg_dump_command = "pg_dump -f {tmp_filename} -d {db_name} -U postgres ".format(**command_kwargs)
-    if encrypt:
-        archive_command = ARCHIVE_ENCR_COMMAND.format(**command_kwargs)
-    else:
-        archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
+    archive_command = ARCHIVE_COMMAND.format(**command_kwargs)
     clean_command = CLEAN_DIR_COMMAND.format(**command_kwargs)
 
     sh_command = f"{pg_dump_command} && " f"{archive_command} && " f"{clean_command}"
