@@ -3,6 +3,7 @@ import os
 import logging
 import subprocess
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urljoin
 
 import boto3
@@ -60,7 +61,8 @@ def upload_to_s3(db_name: str, backup_path: str, filename: str):
 
 
 def call_with_logging(command: str):
-    """Call command, detect error and logging
+    """
+    Call command, detect error and logging
 
     :param command: command that need to be called
     :return: True - not found errors. False - errors founded
@@ -87,3 +89,29 @@ def get_filename(db_name: str, prefix: str) -> str:
     """Allows to get result name of backup file"""
 
     return f"{datetime.now():%Y-%m-%d}.{db_name}.{prefix}-backup.tar.gz"
+
+
+def encrypt_file(file_path: str, encrypt_pass: str) -> str:
+    """Encrypts file by provided path (with openssl)"""
+    encrypted_file_path = f"{file_path}.enc"
+    encrypt_command = (
+        f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {encrypt_pass} -in {file_path} "
+        f"> {encrypted_file_path}"
+    )
+    replace_command = f"rm {file_path} && mv {encrypted_file_path} {file_path}"
+    call_with_logging(encrypt_command)
+    call_with_logging(replace_command)
+    return file_path
+
+
+def decrypt_file(file_path: str, encrypt_pass: str) -> str:
+    """Decrypts file by provided path (with openssl)"""
+    decrypted_file_path = f"{file_path}.dec"
+    decrypt_command = (
+        f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {encrypt_pass} -in {file_path} "
+        f"> {decrypted_file_path}"
+    )
+    replace_command = f"rm {file_path} && mv {decrypted_file_path} {file_path}"
+    call_with_logging(decrypt_command)
+    call_with_logging(replace_command)
+    return file_path

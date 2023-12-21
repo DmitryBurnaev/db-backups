@@ -12,4 +12,4 @@ black = "~=23.11.0"
 flake8 = "==3.7.8"
 
 [requires]
-python_version = "3.11"
+python_version = "3.12"
