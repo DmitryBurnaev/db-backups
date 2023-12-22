@@ -1,4 +1,3 @@
-import mimetypes
 import os
 import logging
 import subprocess
@@ -24,24 +23,31 @@ class BackupError(Exception):
         return f"BackupError: {self.message}"
 
 
-def upload_to_s3(db_name: str, backup_path: str, filename: str):
+def upload_to_s3(db_name: str, backup_path: Path) -> None:
     """Allows to upload src_filename to S3 storage"""
-
+    check_env_variables(
+        "S3_STORAGE_URL",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_REGION_NAME",
+    )
     session = boto3.session.Session(
         aws_access_key_id=settings.S3_ACCESS_KEY_ID,
         aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
         region_name=settings.S3_REGION_NAME,
     )
     s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
-    mimetype, _ = mimetypes.guess_type(backup_path)
-    dst_path = os.path.join(settings.S3_DST_PATH, filename)
+    # mimetype, _ = mimetypes.guess_type(backup_path)
+    # if not mimetype:
+    #
+    dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
         logger.info("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         s3.upload_file(
             Filename=backup_path,
             Bucket=settings.S3_BUCKET_NAME,
             Key=dst_path,
-            ExtraArgs={"ContentType": mimetype},
+            # ExtraArgs={"ContentType": mimetype},
         )
 
     except s3_exceptions.ClientError as error:
@@ -69,7 +75,7 @@ def call_with_logging(command: str):
     :raise `BackupError`
 
     """
-
+    command = command.strip()
     logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
@@ -85,26 +91,25 @@ def call_with_logging(command: str):
     return output
 
 
-def get_filename(db_name: str, prefix: str) -> str:
+def get_filename(db_name: str, suffix: str = "") -> str:
     """Allows to get result name of backup file"""
+    now_time = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    return f"{now_time}.{db_name}.backup{suffix}"
 
-    return f"{datetime.now():%Y-%m-%d}.{db_name}.{prefix}-backup.tar.gz"
 
-
-def encrypt_file(file_path: str, encrypt_pass: str) -> str:
+def encrypt_file(file_path: Path, encrypt_pass: str) -> Path:
     """Encrypts file by provided path (with openssl)"""
-    encrypted_file_path = f"{file_path}.enc"
+    encrypted_file_path = file_path.with_suffix(f"{file_path.suffix}.enc")
     encrypt_command = (
         f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {encrypt_pass} -in {file_path} "
         f"> {encrypted_file_path}"
     )
-    replace_command = f"rm {file_path} && mv {encrypted_file_path} {file_path}"
-    call_with_logging(encrypt_command)
-    call_with_logging(replace_command)
-    return file_path
+    call_with_logging(command=encrypt_command)
+    call_with_logging(command=f"rm {file_path}")
+    return encrypted_file_path
 
 
-def decrypt_file(file_path: str, encrypt_pass: str) -> str:
+def decrypt_file(file_path: Path, encrypt_pass: str) -> Path:
     """Decrypts file by provided path (with openssl)"""
     decrypted_file_path = f"{file_path}.dec"
     decrypt_command = (
@@ -115,3 +120,31 @@ def decrypt_file(file_path: str, encrypt_pass: str) -> str:
     call_with_logging(decrypt_command)
     call_with_logging(replace_command)
     return file_path
+
+
+def check_env_variables(*env_variables) -> None:
+    if missed_variables := [
+        variable for variable in env_variables if not getattr(settings, variable)
+    ]:
+        raise BackupError(f"Missing required variables: {tuple(missed_variables)}")
+
+
+def copy_file(src: Path, dst: Path | str) -> None:
+    dest_dir = Path(dst)
+    if not dest_dir.exists():
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+    if not dest_dir.is_dir():
+        raise BackupError(f"Couldn't copy backup to non-dir path: '{dst}'")
+
+    try:
+        call_with_logging(f"cp {src} {dst}")
+    except Exception as exc:
+        raise BackupError(f"Couldn't copy backup '{dst}': {exc!r}")
+
+
+def remove_file(file_path: Path):
+    try:
+        call_with_logging(f"rm {file_path}")
+    except Exception as exc:
+        logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
