@@ -31,37 +31,43 @@ pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container pos
 To store backup on host's directory
 ```shell script
 docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/backups/backups backup python -m src.run <DB_NAME> --handler postgres 
+docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run <DB_NAME> --handler postgres --local /app/backups 
 ```
 
 ### Run postgres backup via docker (s3 backup)
 To run backup process from docker with db-backup service
 ```shell script
 docker-compose up --build
-docker-compose run backup python -m src.run <DB_NAME> --handler postgres  --s3
+docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3
+```
+
+### Run postgres backup via docker (s3 backup) + encrypt
+To run backup process from docker with db-backup service
+```shell
+echo "ENCRYPT_PASS=<YOUR_SECRET_KEY>" > .env
+docker-compose up --build
+docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
 ```
 
 ### Command line options
 ```text
-usage: run.py [-h] [--handler BACKUP_HANDLER] [--container CONTAINER]
-              [--local_directory LOCAL_DIRECTORY]
-              Database Name
+usage: run.py [-h] --handler BACKUP_HANDLER [--docker-container CONTAINER_NAME] [--s3] [--local LOCAL] [--encrypt] [--encrypt-pass ENCRYPT_PASS] DB_NAME
 
 positional arguments:
-  Database Name         Database name for backup
+  DB_NAME               Database's name for backup
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --handler BACKUP_HANDLER
-                        Required handler for backup (['mysql', 'postgres',
-                        'docker_postgres'])
-  --container CONTAINER
-                        If using docker_* handler. You should define db-source
-                        container
-  --s3                  Send backup to S3 storage                        
-  --local_directory LOCAL_DIRECTORY
-                        Local directory for saving backups
-
+                        Handler, which will be used for backup ('mysql', 'postgres', 'docker_postgres')
+  --docker-container CONTAINER_NAME
+                        Name of docker container which should be used for getting dump. Required for using docker_* handler
+  --s3                  Send backup to S3-like storage (required additional env variables)
+  --local LOCAL         Local directory for saving backups
+  --encrypt             Turn ON backup's encryption (with openssl)
+  --encrypt-pass ENCRYPT_PASS
+                        Openssl config to provide source of encryption pass: ('env:var_name', 'file:path_name', 'fd:number') | short-details: {'env:var_name': 'get the password from an environment
+                        variable', 'file:path_name': 'get the password from the first line of the file at location', 'fd:number': 'get the password from the file descriptor number'}
 ```
 
 
@@ -98,7 +104,6 @@ Note, variables from this file can't rewrite variables which are set manually
 | ARGUMENT             |                DESCRIPTION                |         EXAMPLE         |           DEFAULT          |
 |:---------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
 | LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
-| LOCAL_BACKUP_DIR     |    Default directory for local backup     |   /home/user/backups    | <path_to_project>/backups/ |
 | LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
 | SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
 | MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
@@ -107,7 +112,7 @@ Note, variables from this file can't rewrite variables which are set manually
 | MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
 | PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
 | PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
-| PG_DUMP              |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
+| PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
 | PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
 | PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
 | S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |

@@ -1,10 +1,10 @@
 FROM python:3.12-slim-bookworm
-WORKDIR /backups
+WORKDIR /app
 
-COPY Pipfile /backups
-COPY Pipfile.lock /backups
+COPY Pipfile /app
+COPY Pipfile.lock /app
 
-RUN groupadd -r backups && useradd -r -g backups backups
+RUN groupadd -r bkp-group && useradd -r -g bkp-user bkp-group
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
 		gcc \
@@ -27,4 +27,4 @@ RUN apt-get update \
 COPY src ./src
 RUN mkdir ./backups
 VOLUME ./backups
-RUN chown -R backups:backups /backups
+RUN chown -R bkp-user:bkp-group /backups
