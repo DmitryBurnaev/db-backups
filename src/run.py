@@ -32,60 +32,72 @@ if settings.SENTRY_DSN:
 
 @click.command()
 @click.option(
+    "--db",
+    metavar="DB_NAME",
+    type=str,
+    help="Database's name for backup",
+    required=True,
+)
+@click.option(
     "--handler",
     metavar="BACKUP_HANDLER",
     type=str,
     required=True,
-    choices=HANDLERS.keys(),
+    show_choices=HANDLERS.keys(),
     help=f"Handler, which will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
     "--docker-container",
     metavar="CONTAINER_NAME",
-    dest="docker_container",
     type=str,
     help="""
-        Name of docker container which should be used for getting dump. 
+        Name of docker container which should be used for getting dump.
         Required for using docker_* handler
     """,
 )
 @click.option(
     "--encrypt",
-    default=False,
-    action="store_true",
+    is_flag=True,
+    flag_value=True,
     help="Turn ON backup's encryption (with openssl)",
 )
 @click.option(
     "--encrypt-pass",
     type=str,
-    dest="encrypt_pass",
     metavar="ENCRYPT_PASS",
     default="env:ENCRYPT_PASS",
+    show_default=True,
     help=f"""
-        Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} | 
-        short-details: {ENCRYPTION_PASS} 
+        Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
+        short-details: {ENCRYPTION_PASS}
     """,
 )
 @click.option(
     "--s3",
-    default=False,
-    action="store_true",
-    help="Send backup to S3-like storage (required additional env variables)",
+    is_flag=True,
+    flag_value=True,
+    help="Send backup to S3-like storage (requires S3_* env vars)",
 )
 @click.option(
-    "--local", type=str, default=None, help="Local directory for saving backups"
+    "--local",
+    is_flag=True,
+    flag_value=True,
+    help="Store backup locally (requires LOCAL_PATH env)",
 )
-def backup(handler, db, docker_container, encrypt, encrypt_pass, s3, local):
+# def backup(handler, db, docker_container, encrypt, encrypt_pass, s3, local):
+def backup(*args, **kwargs):
+    print(args, kwargs)
     """Simple program that greets NAME for a total of COUNT times."""
-    run_backup(
-        handler=handler,
-        db=db,
-        docker_container=docker_container,
-        encrypt=encrypt,
-        encrypt_pass=encrypt_pass,
-        local=local,
-        s3=s3,
-    )
+    run_backup(**kwargs)
+    # run_backup(
+    #     handler=handler,
+    #     db=db,
+    #     docker_container=docker_container,
+    #     encrypt=encrypt,
+    #     encrypt_pass=encrypt_pass,
+    #     local=local,
+    #     s3=s3,
+    # )
 
 
 if __name__ == "__main__":

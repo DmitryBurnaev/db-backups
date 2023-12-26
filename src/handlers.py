@@ -170,6 +170,7 @@ class BaseHandler(ABC):
 
 class MySQLHandler(BaseHandler):
     """Backup mysql from mysql server (via mysqldump)"""
+
     service = "mysql"
     required_variables = (
         "MYSQL_USER",

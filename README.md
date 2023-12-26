@@ -119,7 +119,8 @@ Note, variables from this file can't rewrite variables which are set manually
 | S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
 | S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
 | S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
-| S3_DST_PATH          |      S3 dir for generated RSS feeds       |          files          |                            |
+| S3_DST_PATH          |         S3 dir for created backup         |                         |                            |
+| LOCAL_PATH           |          local dir saving bacup           |                         |                            |
 
 * * *
 

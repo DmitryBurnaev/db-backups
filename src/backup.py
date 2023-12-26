@@ -14,7 +14,6 @@ def run_backup(
     local: str | None = None,
     s3: bool = False,
 ):
-
     if "docker" in handler and not docker_container:
         logger.critical(f"Using handler '{handler}' requires setting '--docker-container' arg")
         exit(1)
@@ -34,7 +33,10 @@ def run_backup(
         utils.copy_file(backup_full_path, local)
 
     if s3:
-        utils.upload_to_s3(db_name=db, backup_path=backup_full_path,)
+        utils.upload_to_s3(
+            db_name=db,
+            backup_path=backup_full_path,
+        )
 
     utils.remove_file(backup_full_path)
     logger.info(f"---- [{db}] BACKUP SUCCESS ----")
