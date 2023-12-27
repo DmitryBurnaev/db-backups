@@ -11,7 +11,7 @@ def run_backup(
     docker_container: str | None,
     encrypt: bool,
     encrypt_pass: str,
-    local: str | None = None,
+    local: bool = False,
     s3: bool = False,
 ):
     if "docker" in handler and not docker_container:

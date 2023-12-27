@@ -6,7 +6,6 @@ $ python3 -m src.run --help
 
 """
 import click
-import argparse
 import logging
 from logging import config
 
@@ -15,6 +14,7 @@ import sentry_sdk
 from src import settings
 from src.backup import run_backup
 from src.handlers import HANDLERS
+from src.utils import colorized_echo
 
 logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
@@ -31,23 +31,22 @@ if settings.SENTRY_DSN:
 
 
 @click.command()
-@click.option(
-    "--db",
+@click.argument(
+    "db",
     metavar="DB_NAME",
     type=str,
-    help="Database's name for backup",
-    required=True,
+    # help="Database's name for backup",
 )
 @click.option(
-    "--handler",
+    "-h", "--handler",
     metavar="BACKUP_HANDLER",
     type=str,
     required=True,
     show_choices=HANDLERS.keys(),
-    help=f"Handler, which will be used for backup {tuple(HANDLERS.keys())}",
+    help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
-    "--docker-container",
+    "-dc", "--docker-container",
     metavar="CONTAINER_NAME",
     type=str,
     help="""
@@ -56,7 +55,7 @@ if settings.SENTRY_DSN:
     """,
 )
 @click.option(
-    "--encrypt",
+    "-e", "--encrypt",
     is_flag=True,
     flag_value=True,
     help="Turn ON backup's encryption (with openssl)",
@@ -64,8 +63,8 @@ if settings.SENTRY_DSN:
 @click.option(
     "--encrypt-pass",
     type=str,
-    metavar="ENCRYPT_PASS",
-    default="env:ENCRYPT_PASS",
+    metavar="DB_BACKUP_ENCRYPT_PASS",
+    default="env:DB_BACKUP_ENCRYPT_PASS",
     show_default=True,
     help=f"""
         Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
@@ -76,92 +75,35 @@ if settings.SENTRY_DSN:
     "--s3",
     is_flag=True,
     flag_value=True,
-    help="Send backup to S3-like storage (requires S3_* env vars)",
+    help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
 )
 @click.option(
-    "--local",
+    "-l", "--local",
     is_flag=True,
     flag_value=True,
-    help="Store backup locally (requires LOCAL_PATH env)",
+    help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
 )
-# def backup(handler, db, docker_container, encrypt, encrypt_pass, s3, local):
-def backup(*args, **kwargs):
-    print(args, kwargs)
-    """Simple program that greets NAME for a total of COUNT times."""
-    run_backup(**kwargs)
-    # run_backup(
-    #     handler=handler,
-    #     db=db,
-    #     docker_container=docker_container,
-    #     encrypt=encrypt,
-    #     encrypt_pass=encrypt_pass,
-    #     local=local,
-    #     s3=s3,
-    # )
+def backup(
+    handler: str,
+    db: str,
+    docker_container: str | None,
+    encrypt: bool,
+    encrypt_pass: str | None,
+    s3: bool,
+    local: bool
+):
+    """Simple program that backups db 'DB_NAME' via specific BACKUP_HANDLER."""
+    colorized_echo(handler, db)
+    run_backup(
+        handler=handler,
+        db=db,
+        docker_container=docker_container,
+        encrypt=encrypt,
+        encrypt_pass=encrypt_pass,
+        local=local,
+        s3=s3,
+    )
 
 
 if __name__ == "__main__":
     backup()
-    #
-    # p = argparse.ArgumentParser()
-    # p.add_argument("db", metavar="DB_NAME", type=str, help="Database's name for backup")
-    #
-    # p.add_argument(
-    #     "--handler",
-    #     metavar="BACKUP_HANDLER",
-    #     type=str,
-    #     required=True,
-    #     choices=HANDLERS.keys(),
-    #     help=f"Handler, which will be used for backup {tuple(HANDLERS.keys())}",
-    # )
-    # p.add_argument(
-    #     "--docker-container",
-    #     metavar="CONTAINER_NAME",
-    #     dest="docker_container",
-    #     type=str,
-    #     help="""
-    #         Name of docker container which should be used for getting dump.
-    #         Required for using docker_* handler
-    #     """,
-    # )
-    # p.add_argument(
-    #     "--s3",
-    #     default=False,
-    #     action="store_true",
-    #     help="Send backup to S3-like storage (required additional env variables)",
-    # )
-    # p.add_argument("--local", type=str, default=None, help="Local directory for saving backups")
-    # p.add_argument(
-    #     "--encrypt",
-    #     default=False,
-    #     action="store_true",
-    #     help="Turn ON backup's encryption (with openssl)",
-    # )
-    # p.add_argument(
-    #     "--encrypt-pass",
-    #     type=str,
-    #     dest="encrypt_pass",
-    #     metavar="ENCRYPT_PASS",
-    #     default="env:ENCRYPT_PASS",
-    #     help=f"""
-    #         Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
-    #         short-details: {ENCRYPTION_PASS}
-    #     """,
-    # )
-    # # p.add_argument(
-    # #     "--restore",
-    # #     default=False,
-    # #     action="store_true",
-    # #     help="Run restore logic instead",
-    # # )
-    # args = p.parse_args()
-    #
-    # run_backup(
-    #     handler=args.handler,
-    #     db=args.db,
-    #     docker_container=args.docker_container,
-    #     encrypt=args.encrypt,
-    #     encrypt_pass=args.encrypt_pass,
-    #     local=args.local,
-    #     s3=args.s3,
-    # )
