@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import boto3
+import click
 from botocore import exceptions as s3_exceptions
 
 from src import settings
@@ -148,3 +149,27 @@ def remove_file(file_path: Path):
         call_with_logging(f"rm {file_path}")
     except Exception as exc:
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
+
+
+def colorized_echo(handler: str, db_name: str):
+    all_colors = (
+        # "black",
+        # "red",
+        "green",
+        # "yellow",
+        # "blue",
+        # "magenta",
+        # "cyan",
+        # "white",
+        # "bright_black",
+        # "bright_red",
+        # "bright_green",
+        # "bright_yellow",
+        # "bright_blue",
+        # "bright_magenta",
+        # "bright_cyan",
+        # "bright_white",
+    )
+    for color in all_colors:
+        # click.echo(click.style(f"I am colored {color}", fg=color))
+        click.echo(click.style(f"Backup '{db_name}' [{handler}]", fg=color))
