@@ -35,7 +35,6 @@ if settings.SENTRY_DSN:
     "db",
     metavar="DB_NAME",
     type=str,
-    # help="Database's name for backup",
 )
 @click.option(
     "-h", "--handler",
@@ -68,7 +67,7 @@ if settings.SENTRY_DSN:
     show_default=True,
     help=f"""
         Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
-        short-details: {ENCRYPTION_PASS}
+        see details in README.md
     """,
 )
 @click.option(
