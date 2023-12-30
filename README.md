@@ -51,23 +51,30 @@ docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3 --
 
 ### Command line options
 ```text
-usage: run.py [-h] --handler BACKUP_HANDLER [--docker-container CONTAINER_NAME] [--s3] [--local LOCAL] [--encrypt] [--encrypt-pass ENCRYPT_PASS] DB_NAME
+Usage: python -m src.run [OPTIONS] DB_NAME
 
-positional arguments:
-  DB_NAME               Database's name for backup
+  Simple program that backups db 'DB_NAME' via specific BACKUP_HANDLER.
 
-options:
-  -h, --help            show this help message and exit
-  --handler BACKUP_HANDLER
-                        Handler, which will be used for backup ('mysql', 'postgres', 'docker_postgres')
-  --docker-container CONTAINER_NAME
-                        Name of docker container which should be used for getting dump. Required for using docker_* handler
-  --s3                  Send backup to S3-like storage (required additional env variables)
-  --local LOCAL         Local directory for saving backups
-  --encrypt             Turn ON backup's encryption (with openssl)
-  --encrypt-pass ENCRYPT_PASS
-                        Openssl config to provide source of encryption pass: ('env:var_name', 'file:path_name', 'fd:number') | short-details: {'env:var_name': 'get the password from an environment
-                        variable', 'file:path_name': 'get the password from the first line of the file at location', 'fd:number': 'get the password from the file descriptor number'}
+Options:
+  -h, --handler BACKUP_HANDLER    Handler, that will be used for backup
+                                  ('mysql', 'postgres', 'docker-postgres')
+                                  [required]
+  -dc, --docker-container CONTAINER_NAME
+                                  Name of docker container which should be
+                                  used for getting dump. Required for using
+                                  docker_* handler
+  -e, --encrypt                   Turn ON backup's encryption (with openssl)
+  --encrypt-pass DB_BACKUP_ENCRYPT_PASS
+                                  Openssl config to provide source of
+                                  encryption pass: ('env:var_name',
+                                  'file:path_name', 'fd:number') | see details
+                                  in README.md  [default:
+                                  env:DB_BACKUP_ENCRYPT_PASS]
+  --s3                            Send backup to S3-like storage (requires
+                                  DB_BACKUP_S3_* env vars)
+  -l, --local                     Store backup locally (requires
+                                  DB_BACKUP_LOCAL_PATH env)
+  --help                          Show this message and exit.
 ```
 
 
