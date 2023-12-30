@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(os.path.dirname(os.path.dirname(__file__)))
+SRC_DIR = BASE_DIR / "src"
 LOG_DIR = Path(os.getenv("DB_BACKUP_LOG_DIR", BASE_DIR / "log"))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -49,7 +50,8 @@ LOGGING = {
             "backupCount": 20,
             "encoding": "utf8",
         },
-        "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
+        # "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
     },
-    "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
+    "loggers": {"": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": True}},
+    # "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
 }

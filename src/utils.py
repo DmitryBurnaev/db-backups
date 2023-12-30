@@ -77,6 +77,7 @@ def call_with_logging(command: str):
 
     """
     command = command.strip()
+    # TODO: replace passwords with '***'
     logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
