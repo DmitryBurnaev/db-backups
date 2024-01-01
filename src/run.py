@@ -19,17 +19,11 @@ logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
 
 
-ENCRYPTION_PASS = {
-    "env:var_name": "get the password from an environment variable",
-    "file:path_name": "get the password from the first line of the file at location",
-    "fd:number": "get the password from the file descriptor number",
-}
-
 if settings.SENTRY_DSN:
     sentry_sdk.init(settings.SENTRY_DSN)
 
 
-CONTEXT_SETTINGS = dict(auto_envvar_prefix="COMPLEX")
+# CONTEXT_SETTINGS = dict(auto_envvar_prefix="COMPLEX")
 
 
 class Environment:
@@ -48,7 +42,7 @@ class Environment:
 
     def log(self, msg: str, *args, level: int = logging.INFO):
         """Logs a message to stderr."""
-        print(self.verbose, level)
+
         if not self.verbose and level <= logging.DEBUG:
             return
 
@@ -91,13 +85,10 @@ class ComplexCLI(click.Group):
         return mod.cli
 
 
-@click.command(cls=ComplexCLI, context_settings=CONTEXT_SETTINGS)
-@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
+@click.command(cls=ComplexCLI)
 @pass_environment
-def cli(ctx: Environment, verbose: bool):
+def cli(ctx: Environment):
     """A complex command line interface."""
-    ctx.verbose = verbose
-    print("cli", ctx.verbose, id(ctx))
 
 
 if __name__ == "__main__":
