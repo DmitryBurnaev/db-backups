@@ -3,6 +3,7 @@ import logging
 import click
 
 from src.backup import run_backup
+from src.constants import ENCRYPTION_PASS
 from src.handlers import HANDLERS
 from src.utils import colorized_echo
 from src.run import pass_environment, Environment
@@ -60,6 +61,7 @@ from src.run import pass_environment, Environment
     flag_value=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
 )
+@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @pass_environment
 def cli(
     ctx: Environment,
@@ -69,14 +71,19 @@ def cli(
     encrypt: bool,
     encrypt_pass: str | None,
     s3: bool,
-    local: bool
+    local: bool,
+    verbose: bool,
 ):
     """Shows file changes in the current working directory."""
-    # ctx.log("Changed files: none")
-    print(ctx.verbose, id(ctx))
+    ctx.verbose = verbose
     ctx.vlog("bla bla bla, debug info")
     ctx.vlog("Call command [%s] ... ", "git clone ...")
-    colorized_echo(handler, db)
+    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.DEBUG)
+    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.INFO)
+    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.WARNING)
+    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.ERROR)
+    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.CRITICAL)
+    # colorized_echo(handler, db)
     run_backup(
         handler=handler,
         db=db,
@@ -86,8 +93,3 @@ def cli(
         local=local,
         s3=s3,
     )
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.DEBUG)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.INFO)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.WARNING)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.ERROR)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.CRITICAL)
