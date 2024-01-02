@@ -2,14 +2,28 @@ import logging
 
 import click
 
-from src.backup import run_backup
-from src.constants import ENCRYPTION_PASS
+from src import utils, settings
 from src.handlers import HANDLERS
-from src.utils import colorized_echo
-from src.run import pass_environment, Environment
+from src.constants import ENCRYPTION_PASS
+from src.run import pass_environment
+from src.utils import LoggerContext
+
+env_vars_requires = {
+    "s3": (
+        "DB_BACKUP_S3_REGION_NAME",
+        "DB_BACKUP_S3_STORAGE_URL",
+        "DB_BACKUP_S3_ACCESS_KEY_ID",
+        "DB_BACKUP_S3_SECRET_ACCESS_KEY",
+        "DB_BACKUP_S3_BUCKET_NAME",
+        "DB_BACKUP_S3_DST_PATH",
+    ),
+    "local": (
+        "DB_BACKUP_LOCAL_PATH",
+    )
+}
 
 
-@click.command("backup", short_help="Shows file changes.")
+@click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
 @click.argument(
     "db",
     metavar="DB_NAME",
@@ -50,46 +64,65 @@ from src.run import pass_environment, Environment
     """,
 )
 @click.option(
-    "--s3",
+    "-s3", "--copy-s3",
     is_flag=True,
     flag_value=True,
     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
+    envvar=env_vars_requires["s3"],
 )
 @click.option(
-    "-l", "--local",
+    "-l", "--copy-local",
     is_flag=True,
     flag_value=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
+    envvar=env_vars_requires["local"],
 )
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @pass_environment
 def cli(
-    ctx: Environment,
+    logger: LoggerContext,
     handler: str,
     db: str,
     docker_container: str | None,
     encrypt: bool,
     encrypt_pass: str | None,
-    s3: bool,
-    local: bool,
+    copy_s3: bool,
+    copy_local: bool,
     verbose: bool,
 ):
     """Shows file changes in the current working directory."""
-    ctx.verbose = verbose
-    ctx.vlog("bla bla bla, debug info")
-    ctx.vlog("Call command [%s] ... ", "git clone ...")
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.DEBUG)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.INFO)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.WARNING)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.ERROR)
-    ctx.log("Call command [%s] ... ", "git clone ...", level=logging.CRITICAL)
-    # colorized_echo(handler, db)
-    run_backup(
-        handler=handler,
-        db=db,
-        docker_container=docker_container,
-        encrypt=encrypt,
-        encrypt_pass=encrypt_pass,
-        local=local,
-        s3=s3,
-    )
+    logger.verbose = verbose
+    logger.logger = logging.getLogger(__name__)
+
+    try:
+        backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+    except KeyError:
+        logger.critical("Unknown handler '%s'", handler)
+        exit(1)
+
+    if "docker" in handler and not docker_container:
+        logger.critical("Using handler '%s' requires setting '--docker-container' arg", handler)
+        exit(1)
+
+    try:
+        logger.info("---- [%s] BACKUP STARTED ---- ", db)
+        backup_full_path = backup_handler()
+    except Exception as exc:
+        logger.exception(f"---- [%s] BACKUP FAILED!!! ---- \n Error: %r", db, exc)
+        exit(2)
+
+    if encrypt:
+        backup_full_path = utils.encrypt_file(
+            file_path=backup_full_path,
+            encrypt_pass=encrypt_pass,
+            logger=logger,
+        )
+
+    if copy_local:
+        utils.copy_file(src=backup_full_path, dst=settings.LOCAL_PATH, logger=logger)
+
+    if copy_s3:
+        utils.upload_to_s3(db_name=db, backup_path=backup_full_path, logger=logger)
+
+    utils.remove_file(backup_full_path, logger=logger)
+    logger.info("---- [%s] BACKUP SUCCESS ----", db)
