@@ -1,6 +1,7 @@
 import os
 import logging
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin
@@ -10,9 +11,9 @@ import click
 from botocore import exceptions as s3_exceptions
 
 from src import settings
+from src.run import logger
 
-
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class BackupError(Exception):
@@ -67,11 +68,12 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
         logger.info("Great! uploading for [%s] was done! \n result: %s", db_name, result_url)
 
 
-def call_with_logging(command: str):
+def call_with_logging(command: str, logger: "LoggerContext"):
     """
     Call command, detect error and logging
 
     :param command: command that need to be called
+    :param logger: logger-like object with logger's methods
     :return: True - not found errors. False - errors founded
     :raise `BackupError`
 
@@ -174,3 +176,58 @@ def colorized_echo(handler: str, db_name: str):
     for color in all_colors:
         # click.echo(click.style(f"I am colored {color}", fg=color))
         click.echo(click.style(f"Backup '{db_name}' [{handler}]", fg=color))
+
+
+class LoggerContext:
+    log_colors = {
+        logging.DEBUG: "black",
+        logging.INFO: "green",
+        logging.WARNING: "yellow",
+        logging.ERROR: "red",
+        logging.CRITICAL: "red",
+    }
+
+    def __init__(self):
+        self.verbose = False
+        self.skip_colours = False
+        self.home = os.getcwd()
+        self.logger = logger
+
+    def log(self, msg: str, *args, level: int = logging.INFO, exception: bool = False):
+        """Logs a message to stderr."""
+
+        if not self.verbose and level <= logging.DEBUG:
+            return
+
+        echo_msg = f"{logging.getLevelName(level)}: {msg}"
+        if args:
+            echo_msg %= args
+
+        color = self.log_colors[level]
+        if not self.skip_colours:
+            echo_msg = click.style(echo_msg, fg=color)
+
+        click.echo(echo_msg, file=sys.stderr)
+        self.logger.log(level, msg, *args, exc_info=exception)
+
+    def vlog(self, msg, *args):
+        """Logs a message to stderr only if verbose is enabled."""
+        self.log(msg, *args, level=logging.DEBUG)
+
+    def debug(self, msg, *args):
+        self.log(msg, *args, level=logging.DEBUG)
+
+    def info(self, msg, *args):
+        self.log(msg, *args, level=logging.INFO)
+
+    def warning(self, msg, *args):
+        self.log(msg, *args, level=logging.WARNING)
+
+    def error(self, msg, *args):
+        self.log(msg, *args, level=logging.ERROR)
+
+    def exception(self, msg, *args):
+        self.log(msg, *args, level=logging.ERROR, exception=True)
+
+    def critical(self, msg, *args):
+        self.log(msg, *args, level=logging.CRITICAL)
