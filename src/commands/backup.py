@@ -77,7 +77,8 @@ env_vars_requires = {
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
     envvar=env_vars_requires["local"],
 )
-@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
+# @click.option("-v", "--verbose", is_flag=True, help="Enables verbose mode.")
+# @click.option("--no-colours", is_flag=True, help="Disables colorized output.")
 @pass_environment
 def cli(
     logger: LoggerContext,
@@ -88,10 +89,10 @@ def cli(
     encrypt_pass: str | None,
     copy_s3: bool,
     copy_local: bool,
-    verbose: bool,
+    # verbose: bool,
 ):
     """Shows file changes in the current working directory."""
-    logger.verbose = verbose
+    # logger.verbose = verbose
     logger.logger = logging.getLogger(__name__)
 
     try:

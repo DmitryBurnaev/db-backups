@@ -1,9 +1,11 @@
+import dataclasses
 import os
 import logging
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import boto3
@@ -154,32 +156,16 @@ def remove_file(file_path: Path):
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
 
 
-def colorized_echo(handler: str, db_name: str):
-    all_colors = (
-        # "black",
-        # "red",
-        "green",
-        # "yellow",
-        # "blue",
-        # "magenta",
-        # "cyan",
-        # "white",
-        # "bright_black",
-        # "bright_red",
-        # "bright_green",
-        # "bright_yellow",
-        # "bright_blue",
-        # "bright_magenta",
-        # "bright_cyan",
-        # "bright_white",
-    )
-    for color in all_colors:
-        # click.echo(click.style(f"I am colored {color}", fg=color))
-        click.echo(click.style(f"Backup '{db_name}' [{handler}]", fg=color))
-
-
+@dataclasses.dataclass
 class LoggerContext:
-    log_colors = {
+    """ Extended logging (standard logging + click echo) with turning-off verbose mode """
+
+    skip_colors: bool = False
+    verbose: bool = False
+    logger: logging.Logger = logger
+
+    # class settings:
+    log_colors: ClassVar[dict] = {
         logging.DEBUG: "black",
         logging.INFO: "green",
         logging.WARNING: "yellow",
@@ -187,13 +173,30 @@ class LoggerContext:
         logging.CRITICAL: "red",
     }
 
-    def __init__(self):
-        self.verbose = False
-        self.skip_colours = False
-        self.home = os.getcwd()
-        self.logger = logger
+    # def __init__(self, verbose: ):
+    #     self.verbose = False
+    #     self.skip_colors = False
+    #     self.logger = logger
 
-    def log(self, msg: str, *args, level: int = logging.INFO, exception: bool = False):
+    def debug(self, msg, *args):
+        self._log(msg, *args, level=logging.DEBUG)
+
+    def info(self, msg, *args):
+        self._log(msg, *args, level=logging.INFO)
+
+    def warning(self, msg, *args):
+        self._log(msg, *args, level=logging.WARNING)
+
+    def error(self, msg, *args):
+        self._log(msg, *args, level=logging.ERROR)
+
+    def exception(self, msg, *args):
+        self._log(msg, *args, level=logging.ERROR, exception=True)
+
+    def critical(self, msg, *args):
+        self._log(msg, *args, level=logging.CRITICAL)
+
+    def _log(self, msg: str, *args, level: int = logging.INFO, exception: bool = False):
         """Logs a message to stderr."""
 
         if not self.verbose and level <= logging.DEBUG:
@@ -204,30 +207,8 @@ class LoggerContext:
             echo_msg %= args
 
         color = self.log_colors[level]
-        if not self.skip_colours:
+        if not self.skip_colors:
             echo_msg = click.style(echo_msg, fg=color)
 
         click.echo(echo_msg, file=sys.stderr)
         self.logger.log(level, msg, *args, exc_info=exception)
-
-    def vlog(self, msg, *args):
-        """Logs a message to stderr only if verbose is enabled."""
-        self.log(msg, *args, level=logging.DEBUG)
-
-    def debug(self, msg, *args):
-        self.log(msg, *args, level=logging.DEBUG)
-
-    def info(self, msg, *args):
-        self.log(msg, *args, level=logging.INFO)
-
-    def warning(self, msg, *args):
-        self.log(msg, *args, level=logging.WARNING)
-
-    def error(self, msg, *args):
-        self.log(msg, *args, level=logging.ERROR)
-
-    def exception(self, msg, *args):
-        self.log(msg, *args, level=logging.ERROR, exception=True)
-
-    def critical(self, msg, *args):
-        self.log(msg, *args, level=logging.CRITICAL)
