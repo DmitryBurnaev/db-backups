@@ -5,24 +5,24 @@ from pathlib import Path
 from typing import ClassVar, Type
 
 from src import settings
+from src.run import logger_ctx
 from src.utils import (
     call_with_logging,
     get_filename,
     BackupError,
     check_env_variables,
-    LoggerContext,
 )
 
-logger = logging.getLogger(__name__)
+module_logger = logging.getLogger(__name__)
 
 
 class BaseHandler(ABC):
     service: ClassVar[str] = NotImplemented
     required_variables: ClassVar[tuple[str]] = NotImplemented
 
-    def __init__(self, db_name: str, logger: LoggerContext, **extra_kwargs):
+    def __init__(self, db_name: str, **extra_kwargs):
         self.db_name = db_name
-        self.logger = logger
+        self.logger = logger_ctx.get(default=module_logger)
         self.backup_filename = get_filename(self.db_name)
         self.backup_path = settings.TMP_BACKUP_DIR / f"{self.db_name}.backup.sql"
         self.compressed_backup_path = settings.TMP_BACKUP_DIR / f"{self.backup_filename}.tar.gz"
@@ -123,8 +123,8 @@ class DockerPGHandler(BaseHandler):
     service = "docker-postgres"
     required_variables = ()
 
-    def __init__(self, db_name: str, logger: LoggerContext, **extra_kwargs):
-        super().__init__(db_name, logger, **extra_kwargs)
+    def __init__(self, db_name: str, **extra_kwargs):
+        super().__init__(db_name, **extra_kwargs)
         self.container_name = self.extra_kwargs.get("container_name")
         if not self.container_name:
             raise RuntimeError("container_name is required")
