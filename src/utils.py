@@ -13,9 +13,9 @@ import click
 from botocore import exceptions as s3_exceptions
 
 from src import settings
-from src.run import logger
+from src.run import logger_ctx
 
-# logger = logging.getLogger(__name__)
+module_logger = logging.getLogger(__name__)
 
 
 class BackupError(Exception):
@@ -29,6 +29,7 @@ class BackupError(Exception):
 
 def upload_to_s3(db_name: str, backup_path: Path) -> None:
     """Allows to upload src_filename to S3 storage"""
+    logger = logger_ctx.get(default=module_logger)
     check_env_variables(
         "S3_STORAGE_URL",
         "S3_ACCESS_KEY_ID",
@@ -41,9 +42,7 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
         region_name=settings.S3_REGION_NAME,
     )
     s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
-    # mimetype, _ = mimetypes.guess_type(backup_path)
-    # if not mimetype:
-    #
+
     dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
         logger.info("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
@@ -70,17 +69,18 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
         logger.info("Great! uploading for [%s] was done! \n result: %s", db_name, result_url)
 
 
-def call_with_logging(command: str, logger: "LoggerContext"):
+def call_with_logging(command: str):
     """
     Call command, detect error and logging
 
     :param command: command that need to be called
-    :param logger: logger-like object with logger's methods
     :return: True - not found errors. False - errors founded
     :raise `BackupError`
 
     """
     command = command.strip()
+    logger = logger_ctx.get(default=module_logger)
+
     # TODO: replace passwords with '***'
     logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
@@ -150,6 +150,7 @@ def copy_file(src: Path, dst: Path | str) -> None:
 
 
 def remove_file(file_path: Path):
+    logger = logger_ctx.get(default=module_logger)
     try:
         call_with_logging(f"rm {file_path}")
     except Exception as exc:
@@ -158,11 +159,11 @@ def remove_file(file_path: Path):
 
 @dataclasses.dataclass
 class LoggerContext:
-    """ Extended logging (standard logging + click echo) with turning-off verbose mode """
+    """Extended logging (standard logging + click echo) with turning-off verbose mode"""
 
     skip_colors: bool = False
     verbose: bool = False
-    logger: logging.Logger = logger
+    logger: logging.Logger = module_logger
 
     # class settings:
     log_colors: ClassVar[dict] = {
@@ -172,11 +173,6 @@ class LoggerContext:
         logging.ERROR: "red",
         logging.CRITICAL: "red",
     }
-
-    # def __init__(self, verbose: ):
-    #     self.verbose = False
-    #     self.skip_colors = False
-    #     self.logger = logger
 
     def debug(self, msg, *args):
         self._log(msg, *args, level=logging.DEBUG)

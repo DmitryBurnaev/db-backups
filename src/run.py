@@ -47,12 +47,8 @@ class ComplexCLI(click.Group):
 
 
 @click.command(cls=ComplexCLI)
-@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
-@click.option("--no-colors", is_flag=True, help="Disables colorized output.")
-def cli(verbose: bool, no_colors: bool):
+def cli():
     """A complex command line interface."""
-    logger_context = LoggerContext(verbose=verbose, skip_colors=no_colors)
-    logger_ctx.set(logger_context)
 
 
 if __name__ == "__main__":

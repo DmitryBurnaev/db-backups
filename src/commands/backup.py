@@ -5,7 +5,7 @@ import click
 from src import utils, settings
 from src.handlers import HANDLERS
 from src.constants import ENCRYPTION_PASS
-from src.run import pass_environment
+from src.run import logger_ctx
 from src.utils import LoggerContext
 
 env_vars_requires = {
@@ -17,10 +17,9 @@ env_vars_requires = {
         "DB_BACKUP_S3_BUCKET_NAME",
         "DB_BACKUP_S3_DST_PATH",
     ),
-    "local": (
-        "DB_BACKUP_LOCAL_PATH",
-    )
+    "local": ("DB_BACKUP_LOCAL_PATH",),
 }
+module_logger = logging.getLogger("backup")
 
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
@@ -30,7 +29,8 @@ env_vars_requires = {
     type=str,
 )
 @click.option(
-    "-h", "--handler",
+    "-h",
+    "--handler",
     metavar="BACKUP_HANDLER",
     type=str,
     required=True,
@@ -38,7 +38,8 @@ env_vars_requires = {
     help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
-    "-dc", "--docker-container",
+    "-dc",
+    "--docker-container",
     metavar="CONTAINER_NAME",
     type=str,
     help="""
@@ -47,7 +48,8 @@ env_vars_requires = {
     """,
 )
 @click.option(
-    "-e", "--encrypt",
+    "-e",
+    "--encrypt",
     is_flag=True,
     flag_value=True,
     help="Turn ON backup's encryption (with openssl)",
@@ -64,24 +66,24 @@ env_vars_requires = {
     """,
 )
 @click.option(
-    "-s3", "--copy-s3",
+    "-s3",
+    "--copy-s3",
     is_flag=True,
     flag_value=True,
     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
     envvar=env_vars_requires["s3"],
 )
 @click.option(
-    "-l", "--copy-local",
+    "-l",
+    "--copy-local",
     is_flag=True,
     flag_value=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
     envvar=env_vars_requires["local"],
 )
-# @click.option("-v", "--verbose", is_flag=True, help="Enables verbose mode.")
-# @click.option("--no-colours", is_flag=True, help="Disables colorized output.")
-@pass_environment
+@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
+@click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    logger: LoggerContext,
     handler: str,
     db: str,
     docker_container: str | None,
@@ -89,11 +91,12 @@ def cli(
     encrypt_pass: str | None,
     copy_s3: bool,
     copy_local: bool,
-    # verbose: bool,
+    verbose: bool,
+    no_colors: bool,
 ):
     """Shows file changes in the current working directory."""
-    # logger.verbose = verbose
-    logger.logger = logging.getLogger(__name__)
+    logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
+    logger_ctx.set(logger)
 
     try:
         backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
@@ -109,21 +112,17 @@ def cli(
         logger.info("---- [%s] BACKUP STARTED ---- ", db)
         backup_full_path = backup_handler()
     except Exception as exc:
-        logger.exception(f"---- [%s] BACKUP FAILED!!! ---- \n Error: %r", db, exc)
+        logger.exception("---- [%s] BACKUP FAILED!!! ---- \n Error: %r", db, exc)
         exit(2)
 
     if encrypt:
-        backup_full_path = utils.encrypt_file(
-            file_path=backup_full_path,
-            encrypt_pass=encrypt_pass,
-            logger=logger,
-        )
+        backup_full_path = utils.encrypt_file(file_path=backup_full_path, encrypt_pass=encrypt_pass)
 
     if copy_local:
-        utils.copy_file(src=backup_full_path, dst=settings.LOCAL_PATH, logger=logger)
+        utils.copy_file(src=backup_full_path, dst=settings.LOCAL_PATH)
 
     if copy_s3:
-        utils.upload_to_s3(db_name=db, backup_path=backup_full_path, logger=logger)
+        utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
 
-    utils.remove_file(backup_full_path, logger=logger)
+    utils.remove_file(backup_full_path)
     logger.info("---- [%s] BACKUP SUCCESS ----", db)
