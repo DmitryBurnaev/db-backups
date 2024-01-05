@@ -32,9 +32,9 @@ module_logger = logging.getLogger("backup")
     "-h",
     "--handler",
     metavar="BACKUP_HANDLER",
-    type=str,
     required=True,
     show_choices=HANDLERS.keys(),
+    type=click.Choice(list(HANDLERS.keys())),
     help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
@@ -98,21 +98,20 @@ def cli(
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
+    if "docker" in handler and not docker_container:
+        logger.critical("Using handler '%s' requires '--docker-container' argument", handler)
+        exit(1)
+
     try:
         backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
     except KeyError:
         logger.critical("Unknown handler '%s'", handler)
         exit(1)
 
-    if "docker" in handler and not docker_container:
-        logger.critical("Using handler '%s' requires setting '--docker-container' arg", handler)
-        exit(1)
-
     try:
-        logger.info("---- [%s] BACKUP STARTED ---- ", db)
         backup_full_path = backup_handler()
     except Exception as exc:
-        logger.exception("---- [%s] BACKUP FAILED!!! ---- \n Error: %r", db, exc)
+        logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
         exit(2)
 
     if encrypt:
@@ -125,4 +124,4 @@ def cli(
         utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
 
     utils.remove_file(backup_full_path)
-    logger.info("---- [%s] BACKUP SUCCESS ----", db)
+    logger.info("[%s] BACKUP SUCCESS", db)

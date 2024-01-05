@@ -26,10 +26,12 @@ class BackupError(Exception):
     def __str__(self):
         return f"BackupError: {self.message}"
 
+    __repr__ = __str__
+
 
 def upload_to_s3(db_name: str, backup_path: Path) -> None:
     """Allows to upload src_filename to S3 storage"""
-    logger = logger_ctx.get(default=module_logger)
+    logger = logger_ctx.get(module_logger)
     check_env_variables(
         "S3_STORAGE_URL",
         "S3_ACCESS_KEY_ID",
@@ -79,7 +81,7 @@ def call_with_logging(command: str):
 
     """
     command = command.strip()
-    logger = logger_ctx.get(default=module_logger)
+    logger = logger_ctx.get(module_logger)
 
     # TODO: replace passwords with '***'
     logger.debug(f"Call command [{command}] ... ")
@@ -87,12 +89,12 @@ def call_with_logging(command: str):
 
     output = po.stderr.read() if po.stderr else b""
     output = output.decode("utf-8")
-    output_lower = output.lower()
+    output_lower = output.lower().strip()
     if "error" in output_lower or "fail" in output_lower:
-        raise BackupError(output)
+        raise BackupError(output.removeprefix("Error: "))
 
     elif output:
-        logger.debug(output.strip())
+        logger.debug(output)
 
     return output
 
@@ -150,7 +152,7 @@ def copy_file(src: Path, dst: Path | str) -> None:
 
 
 def remove_file(file_path: Path):
-    logger = logger_ctx.get(default=module_logger)
+    logger = logger_ctx.get(module_logger)
     try:
         call_with_logging(f"rm {file_path}")
     except Exception as exc:
@@ -167,7 +169,7 @@ class LoggerContext:
 
     # class settings:
     log_colors: ClassVar[dict] = {
-        logging.DEBUG: "black",
+        logging.DEBUG: "white",
         logging.INFO: "green",
         logging.WARNING: "yellow",
         logging.ERROR: "red",

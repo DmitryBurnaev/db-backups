@@ -22,14 +22,14 @@ class BaseHandler(ABC):
 
     def __init__(self, db_name: str, **extra_kwargs):
         self.db_name = db_name
-        self.logger = logger_ctx.get(default=module_logger)
+        self.logger = logger_ctx.get(module_logger)
         self.backup_filename = get_filename(self.db_name)
         self.backup_path = settings.TMP_BACKUP_DIR / f"{self.db_name}.backup.sql"
         self.compressed_backup_path = settings.TMP_BACKUP_DIR / f"{self.backup_filename}.tar.gz"
         self.extra_kwargs = extra_kwargs
 
     def __call__(self, **kwargs) -> Path:
-        self.logger.info(f"Backup [postgres] {self.db_name} ... ")
+        self.logger.info(f"[%s] backup via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         backup_stdout = self._do_backup()
         if not self.backup_path.exists():

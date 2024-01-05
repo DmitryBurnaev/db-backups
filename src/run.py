@@ -7,6 +7,7 @@ $ python3 -m src.run --help
 """
 import os
 import logging
+import typing
 from contextvars import ContextVar
 from logging import config
 
@@ -14,12 +15,13 @@ import click
 import sentry_sdk
 
 from src import settings
-from src.utils import LoggerContext
+
+if typing.TYPE_CHECKING:
+    from src.utils import LoggerContext
 
 logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
-# pass_ = click.make_pass_decorator(LoggerContext, ensure=True)
-logger_ctx: ContextVar[LoggerContext] = ContextVar("logger_ctx")
+logger_ctx: ContextVar["LoggerContext"] = ContextVar("logger_ctx")
 
 
 if settings.SENTRY_DSN:
