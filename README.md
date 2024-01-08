@@ -108,26 +108,26 @@ Environment variables can be set manually or by updating `<path_to_project>/.env
 Note, variables from this file can't rewrite variables which are set manually 
 
 
-| ARGUMENT             |                DESCRIPTION                |         EXAMPLE         |           DEFAULT          |
-|:---------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
-| LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
-| LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
-| SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
-| MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
-| MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |            3306            |
-| MYSQL_USER           | It is used for connecting to MySQL server |          user           |            root            |
-| MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
-| PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
-| PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
-| PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
-| PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
-| PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
-| S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |
-| S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
-| S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
-| S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
-| S3_DST_PATH          |         S3 dir for created backup         |                         |                            |
-| LOCAL_PATH           |          local dir saving bacup           |                         |                            |
+| ARGUMENT                       |                DESCRIPTION                |         EXAMPLE         |          DEFAULT           |
+|:-------------------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
+| DB_BACKUP_LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
+| DB_BACKUP_LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
+| DB_BACKUP_SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
+| DB_BACKUP_MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
+| DB_BACKUP_MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |            3306            |
+| DB_BACKUP_MYSQL_USER           | It is used for connecting to MySQL server |          user           |            root            |
+| DB_BACKUP_MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
+| DB_BACKUP_PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
+| DB_BACKUP_PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
+| DB_BACKUP_PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
+| DB_BACKUP_PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
+| DB_BACKUP_PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
+| DB_BACKUP_S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |
+| DB_BACKUP_S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
+| DB_BACKUP_S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
+| DB_BACKUP_S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
+| DB_BACKUP_S3_PATH              |         S3 dir for created backup         |                         |                            |
+| DB_BACKUP_LOCAL_PATH           |          local dir saving backup          |                         |                            |
 
 * * *
 
