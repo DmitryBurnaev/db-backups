@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 
 import click
 
@@ -6,7 +7,7 @@ from src import utils, settings
 from src.handlers import HANDLERS
 from src.constants import ENCRYPTION_PASS
 from src.run import logger_ctx
-from src.utils import LoggerContext
+from src.utils import LoggerContext, validate_envar_option
 
 ENV_VARS_REQUIRES = {
     "s3": (
@@ -69,14 +70,14 @@ module_logger = logging.getLogger("backup")
     "--copy-s3",
     is_flag=True,
     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-    envvar=ENV_VARS_REQUIRES["s3"],
+    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["s3"]),
 )
 @click.option(
     "-l",
     "--copy-local",
     is_flag=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-    envvar=ENV_VARS_REQUIRES["local"],
+    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["local"]),
 )
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
@@ -107,18 +108,22 @@ def cli(
 
     try:
         backup_full_path = backup_handler()
+
+        if encrypt:
+            backup_full_path = utils.encrypt_file(
+                file_path=backup_full_path,
+                encrypt_pass=encrypt_pass,
+            )
+
+        if copy_local:
+            utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
+
+        if copy_s3:
+            utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
+
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
         exit(2)
-
-    if encrypt:
-        backup_full_path = utils.encrypt_file(file_path=backup_full_path, encrypt_pass=encrypt_pass)
-
-    if copy_local:
-        utils.copy_file(src=backup_full_path, dst=settings.LOCAL_PATH)
-
-    if copy_s3:
-        utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
 
     utils.remove_file(backup_full_path)
     logger.info("[%s] BACKUP SUCCESS", db)

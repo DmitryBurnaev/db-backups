@@ -29,7 +29,7 @@ class BaseHandler(ABC):
         self.extra_kwargs = extra_kwargs
 
     def __call__(self, **kwargs) -> Path:
-        self.logger.info(f"[%s] backup via %s ... ", self.db_name, self.service)
+        self.logger.info(f"[%s] handle backup via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         backup_stdout = self._do_backup()
         if not self.backup_path.exists():
@@ -47,7 +47,11 @@ class BaseHandler(ABC):
 
         self._do_clean()
 
-        self.logger.info(f"Backup [docker-postgres] {self.db_name}: Success!")
+        self.logger.info(
+            "[%s] handle backup: success! | file created: %s",
+            self.db_name,
+            self.compressed_backup_path,
+        )
         return self.compressed_backup_path
 
     @abc.abstractmethod
