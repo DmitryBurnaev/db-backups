@@ -8,14 +8,14 @@ from src.constants import ENCRYPTION_PASS
 from src.run import logger_ctx
 from src.utils import LoggerContext
 
-env_vars_requires = {
+ENV_VARS_REQUIRES = {
     "s3": (
         "DB_BACKUP_S3_REGION_NAME",
         "DB_BACKUP_S3_STORAGE_URL",
         "DB_BACKUP_S3_ACCESS_KEY_ID",
         "DB_BACKUP_S3_SECRET_ACCESS_KEY",
         "DB_BACKUP_S3_BUCKET_NAME",
-        "DB_BACKUP_S3_DST_PATH",
+        "DB_BACKUP_S3_PATH",
     ),
     "local": ("DB_BACKUP_LOCAL_PATH",),
 }
@@ -51,7 +51,6 @@ module_logger = logging.getLogger("backup")
     "-e",
     "--encrypt",
     is_flag=True,
-    flag_value=True,
     help="Turn ON backup's encryption (with openssl)",
 )
 @click.option(
@@ -69,17 +68,15 @@ module_logger = logging.getLogger("backup")
     "-s3",
     "--copy-s3",
     is_flag=True,
-    flag_value=True,
     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-    envvar=env_vars_requires["s3"],
+    envvar=ENV_VARS_REQUIRES["s3"],
 )
 @click.option(
     "-l",
     "--copy-local",
     is_flag=True,
-    flag_value=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-    envvar=env_vars_requires["local"],
+    envvar=ENV_VARS_REQUIRES["local"],
 )
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")

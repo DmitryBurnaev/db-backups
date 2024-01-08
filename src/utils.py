@@ -138,6 +138,9 @@ def check_env_variables(*env_variables) -> None:
 
 
 def copy_file(src: Path, dst: Path | str) -> None:
+    if not dst:
+        raise BackupError("Couldn't copy backup: destination path cannot be empty")
+
     dest_dir = Path(dst)
     if not dest_dir.exists():
         dest_dir.mkdir(parents=True, exist_ok=True)
