@@ -1,36 +1,40 @@
 import os
+import tempfile
+from pathlib import Path
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-LOG_DIR = os.getenv("LOG_DIR", os.path.join(BASE_DIR, "log"))
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+BASE_DIR = Path(os.path.dirname(os.path.dirname(__file__)))
+SRC_DIR = BASE_DIR / "src"
+LOG_DIR = Path(os.getenv("DB_BACKUP_LOG_DIR", BASE_DIR / "log"))
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-LOCAL_BACKUP_DIR = os.getenv("LOCAL_BACKUP_DIR", os.path.join(BASE_DIR, "backups"))
-SENTRY_DSN = os.getenv("SENTRY_DSN")
+LOG_LEVEL = os.getenv("DB_BACKUP_LOG_LEVEL", "INFO")
+SENTRY_DSN = os.getenv("DB_BACKUP_SENTRY_DSN")
 
-MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-MYSQL_USER = os.getenv("MYSQL_USER", "root")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "password")
+MYSQL_HOST = os.getenv("DB_BACKUP_MYSQL_HOST", "localhost")
+MYSQL_PORT = os.getenv("DB_BACKUP_MYSQL_PORT", "3306")
+MYSQL_USER = os.getenv("DB_BACKUP_MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("DB_BACKUP_MYSQL_PASSWORD", "password")
 
-PG_USER = os.getenv("PG_USER", "postgres")
-PG_PASSWORD = os.getenv("PG_PASSWORD", "password")
-PG_DUMP = os.getenv("PG_DUMP", "pg_dump")  # or specific /usr/lib/postgresql/{ver}/pg_dump
-PG_HOST = os.getenv("PG_HOST", "localhost")
-PG_PORT = os.getenv("PG_PORT", "5432")
+PG_USER = os.getenv("DB_BACKUP_PG_USER", "postgres")
+PG_PASSWORD = os.getenv("DB_BACKUP_PG_PASSWORD")
+PG_DUMP_BIN = os.getenv(
+    "DB_BACKUP_PG_DUMP_BIN", "pg_dump"
+)  # or specific /usr/lib/postgresql/{ver}/pg_dump
+PG_HOST = os.getenv("DB_BACKUP_PG_HOST", "localhost")
+PG_PORT = os.getenv("DB_BACKUP_PG_PORT", "5432")
 
-S3_REGION_NAME = os.getenv("S3_REGION_NAME")
-S3_STORAGE_URL = os.getenv("S3_STORAGE_URL")
-S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
-S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-S3_DST_PATH = os.getenv("S3_DST_PATH")
+S3_REGION_NAME = os.getenv("DB_BACKUP_S3_REGION_NAME")
+S3_STORAGE_URL = os.getenv("DB_BACKUP_S3_STORAGE_URL")
+S3_ACCESS_KEY_ID = os.getenv("DB_BACKUP_S3_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY = os.getenv("DB_BACKUP_S3_SECRET_ACCESS_KEY")
+S3_BUCKET_NAME = os.getenv("DB_BACKUP_S3_BUCKET_NAME")
+S3_DST_PATH = os.getenv("DB_BACKUP_S3_PATH")
 
-# override global settings
-if not os.path.isdir(LOG_DIR):
-    os.mkdir(LOG_DIR)
+# TODO: use with flag --local
+LOCAL_PATH = os.getenv("DB_BACKUP_LOCAL_PATH")
 
-if not os.path.isdir(LOCAL_BACKUP_DIR):
-    os.mkdir(LOCAL_BACKUP_DIR)
+TMP_BACKUP_DIR: Path = Path(tempfile.mkdtemp())
+
 
 LOGGING = {
     "version": 1,
@@ -48,7 +52,8 @@ LOGGING = {
             "backupCount": 20,
             "encoding": "utf8",
         },
-        "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
+        # "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
     },
-    "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
+    "loggers": {"": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": True}},
+    # "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
 }

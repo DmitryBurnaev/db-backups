@@ -1,85 +1,57 @@
 """
 This module helps to run backup process
-    db_name
-    handler
-keyword arguments:
-    --container_name: Name of running container for target DB
-    --s3: upload to S3-like storage
-
 You can get additional information by using:
+
 $ python3 -m src.run --help
 
 """
-
-import argparse
+import os
 import logging
+import typing
+from contextvars import ContextVar
 from logging import config
 
+import click
 import sentry_sdk
 
 from src import settings
-from src.handlers import backup_mysql, backup_postgres, backup_postgres_from_docker
-from src.settings import LOGGING
-from src.utils import upload_to_s3
 
+if typing.TYPE_CHECKING:
+    from src.utils import LoggerContext
 
-logging.config.dictConfig(LOGGING)
+logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
+logger_ctx: ContextVar["LoggerContext"] = ContextVar("logger_ctx")
 
-HANDLERS = {
-    "mysql": backup_mysql,
-    "postgres": backup_postgres,
-    "docker_postgres": backup_postgres_from_docker,
-}
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(settings.SENTRY_DSN)
+
+
+class ComplexCLI(click.Group):
+    cmd_folder = settings.SRC_DIR / "commands"
+
+    def list_commands(self, ctx):
+        rv = []
+        for filename in os.listdir(self.cmd_folder):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                rv.append(filename.replace(".py", ""))
+
+        rv.sort()
+        return rv
+
+    def get_command(self, ctx, name):
+        try:
+            mod = __import__(f"src.commands.{name}", None, None, ["cli"])
+        except ImportError:
+            return
+        return mod.cli
+
+
+@click.command(cls=ComplexCLI)
+def cli():
+    """A complex command line interface."""
 
 
 if __name__ == "__main__":
-
-    p = argparse.ArgumentParser()
-    p.add_argument("db_name", metavar="Database Name", type=str, help="Database name for backup")
-
-    p.add_argument(
-        "--handler",
-        metavar="BACKUP_HANDLER",
-        type=str,
-        choices=HANDLERS.keys(),
-        help=f"Required handler for backup ({list(HANDLERS.keys())})",
-    )
-    p.add_argument(
-        "--container",
-        type=str,
-        help="If using docker_* handler. You should define db-source container",
-    )
-    p.add_argument("--s3", default=False, action="store_true", help="Send backup to S3 storage")
-    p.add_argument(
-        "--local_directory", type=str, default=None, help="Local directory for saving backups"
-    )
-
-    if settings.SENTRY_DSN:
-        sentry_sdk.init(settings.SENTRY_DSN)
-
-    args = p.parse_args()
-    if "docker" in args.handler and not args.container:
-        logger.critical("You should define --container")
-        exit(1)
-
-    backup_handler = HANDLERS[args.handler]
-    backup_full_path, backup_filename = None, None
-    local_directory = args.local_directory or settings.LOCAL_BACKUP_DIR
-    try:
-        logger.info(f"---- [{args.db_name}] BACKUP STARTED ---- ")
-        backup_filename, backup_full_path = backup_handler(
-            args.db_name, local_directory, container_name=args.container
-        )
-    except Exception as err:
-        logger.exception(f"---- [{args.db_name}] BACKUP FAILED!!! ---- \n Error: {err}")
-        exit(2)
-
-    if args.s3:
-        upload_to_s3(
-            db_name=args.db_name,
-            backup_path=backup_full_path,
-            filename=backup_filename,
-        )
-
-    logger.info(f"---- [{args.db_name}] BACKUP SUCCESS ----")
+    cli()
