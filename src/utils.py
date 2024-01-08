@@ -5,7 +5,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Any, TypeVar
 from urllib.parse import urljoin
 
 import boto3
@@ -47,28 +47,19 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
 
     dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
-        logger.info("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
+        logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         s3.upload_file(
             Filename=backup_path,
             Bucket=settings.S3_BUCKET_NAME,
             Key=dst_path,
-            # ExtraArgs={"ContentType": mimetype},
         )
 
-    except s3_exceptions.ClientError as error:
-        logger.exception(
-            "Couldn't execute request (upload) to S3: ClientError %s",
-            str(error),
-        )
+    except Exception as exc:
+        logger.exception("Couldn't upload result backup to s3")
+        raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc
 
-    except Exception as error:
-        logger.exception("Shit! We couldn't execute upload to S3: %s", error)
-
-    else:
-        result_url = urljoin(
-            settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path)
-        )
-        logger.info("Great! uploading for [%s] was done! \n result: %s", db_name, result_url)
+    result_url = urljoin(settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path))
+    logger.info("[%s] backup uploaded to s3: %s", db_name, result_url)
 
 
 def call_with_logging(command: str):
@@ -130,28 +121,34 @@ def decrypt_file(file_path: Path, encrypt_pass: str) -> Path:
     return file_path
 
 
-def check_env_variables(*env_variables) -> None:
+def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
     if missed_variables := [
-        variable for variable in env_variables if not getattr(settings, variable)
+        variable for variable in env_variables if not getattr(settings, variable, None)
     ]:
-        raise BackupError(f"Missing required variables: {tuple(missed_variables)}")
+        if raise_exception:
+            raise BackupError(f"Missing required variables: {tuple(missed_variables)}")
+
+    return missed_variables
 
 
-def copy_file(src: Path, dst: Path | str) -> None:
+def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
     if not dst:
         raise BackupError("Couldn't copy backup: destination path cannot be empty")
 
+    logger = logger_ctx.get(module_logger)
     dest_dir = Path(dst)
     if not dest_dir.exists():
         dest_dir.mkdir(parents=True, exist_ok=True)
 
     if not dest_dir.is_dir():
-        raise BackupError(f"Couldn't copy backup to non-dir path: '{dst}'")
+        raise BackupError(f"Couldn't copy backup to non-dir path: '{dest_dir}'")
 
     try:
-        call_with_logging(f"cp {src} {dst}")
+        call_with_logging(f"cp {src} {dest_dir}")
     except Exception as exc:
-        raise BackupError(f"Couldn't copy backup '{dst}': {exc!r}")
+        raise BackupError(f"Couldn't copy backup from {src} to '{dest_dir}': {exc!r}")
+    else:
+        logger.info("[%s] backup copied to %s", db_name, dest_dir / src.name)
 
 
 def remove_file(file_path: Path):
@@ -213,3 +210,16 @@ class LoggerContext:
 
         click.echo(echo_msg, file=sys.stderr)
         self.logger.log(level, msg, *args, exc_info=exception)
+
+
+T = TypeVar("T")
+
+
+def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str]) -> T:
+    if value:
+        if missed_vars := [variable for variable in required_vars if not os.getenv(variable)]:
+            raise click.UsageError(
+                f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"
+            )
+
+    return value
