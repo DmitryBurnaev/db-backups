@@ -31,37 +31,50 @@ pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container pos
 To store backup on host's directory
 ```shell script
 docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/backups/backups backup python -m src.run <DB_NAME> --handler postgres 
+docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run <DB_NAME> --handler postgres --local /app/backups 
 ```
 
 ### Run postgres backup via docker (s3 backup)
 To run backup process from docker with db-backup service
 ```shell script
 docker-compose up --build
-docker-compose run backup python -m src.run <DB_NAME> --handler postgres  --s3
+docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3
+```
+
+### Run postgres backup via docker (s3 backup) + encrypt
+To run backup process from docker with db-backup service
+```shell
+echo "ENCRYPT_PASS=<YOUR_SECRET_KEY>" > .env
+docker-compose up --build
+docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
 ```
 
 ### Command line options
 ```text
-usage: run.py [-h] [--handler BACKUP_HANDLER] [--container CONTAINER]
-              [--local_directory LOCAL_DIRECTORY]
-              Database Name
+Usage: python -m src.run [OPTIONS] DB_NAME
 
-positional arguments:
-  Database Name         Database name for backup
+  Simple program that backups db 'DB_NAME' via specific BACKUP_HANDLER.
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --handler BACKUP_HANDLER
-                        Required handler for backup (['mysql', 'postgres',
-                        'docker_postgres'])
-  --container CONTAINER
-                        If using docker_* handler. You should define db-source
-                        container
-  --s3                  Send backup to S3 storage                        
-  --local_directory LOCAL_DIRECTORY
-                        Local directory for saving backups
-
+Options:
+  -h, --handler BACKUP_HANDLER    Handler, that will be used for backup
+                                  ('mysql', 'postgres', 'docker-postgres')
+                                  [required]
+  -dc, --docker-container CONTAINER_NAME
+                                  Name of docker container which should be
+                                  used for getting dump. Required for using
+                                  docker_* handler
+  -e, --encrypt                   Turn ON backup's encryption (with openssl)
+  --encrypt-pass DB_BACKUP_ENCRYPT_PASS
+                                  Openssl config to provide source of
+                                  encryption pass: ('env:var_name',
+                                  'file:path_name', 'fd:number') | see details
+                                  in README.md  [default:
+                                  env:DB_BACKUP_ENCRYPT_PASS]
+  --s3                            Send backup to S3-like storage (requires
+                                  DB_BACKUP_S3_* env vars)
+  -l, --local                     Store backup locally (requires
+                                  DB_BACKUP_LOCAL_PATH env)
+  --help                          Show this message and exit.
 ```
 
 
@@ -95,26 +108,26 @@ Environment variables can be set manually or by updating `<path_to_project>/.env
 Note, variables from this file can't rewrite variables which are set manually 
 
 
-| ARGUMENT             |                DESCRIPTION                |         EXAMPLE         |           DEFAULT          |
-|:---------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
-| LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
-| LOCAL_BACKUP_DIR     |    Default directory for local backup     |   /home/user/backups    | <path_to_project>/backups/ |
-| LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
-| SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
-| MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
-| MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |            3306            |
-| MYSQL_USER           | It is used for connecting to MySQL server |          user           |            root            |
-| MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
-| PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
-| PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
-| PG_DUMP              |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
-| PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
-| PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
-| S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |
-| S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
-| S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
-| S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
-| S3_DST_PATH          |      S3 dir for generated RSS feeds       |          files          |                            |
+| ARGUMENT                       |                DESCRIPTION                |         EXAMPLE         |          DEFAULT           |
+|:-------------------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
+| DB_BACKUP_LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
+| DB_BACKUP_LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
+| DB_BACKUP_SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
+| DB_BACKUP_MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
+| DB_BACKUP_MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |            3306            |
+| DB_BACKUP_MYSQL_USER           | It is used for connecting to MySQL server |          user           |            root            |
+| DB_BACKUP_MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
+| DB_BACKUP_PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
+| DB_BACKUP_PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
+| DB_BACKUP_PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
+| DB_BACKUP_PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
+| DB_BACKUP_PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
+| DB_BACKUP_S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |
+| DB_BACKUP_S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
+| DB_BACKUP_S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
+| DB_BACKUP_S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
+| DB_BACKUP_S3_PATH              |         S3 dir for created backup         |                         |                            |
+| DB_BACKUP_LOCAL_PATH           |          local dir saving backup          |                         |                            |
 
 * * *
 

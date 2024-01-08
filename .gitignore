@@ -6,3 +6,4 @@ log/
 backups/
 .env
 run.sh
+.python-version
