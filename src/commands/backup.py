@@ -19,6 +19,7 @@ ENV_VARS_REQUIRES = {
         "DB_BACKUP_S3_PATH",
     ),
     "local": ("DB_BACKUP_LOCAL_PATH",),
+    "encrypt": ("DB_BACKUP_LOCAL_PATH",),
 }
 module_logger = logging.getLogger("backup")
 
@@ -111,6 +112,7 @@ def cli(
 
         if encrypt:
             backup_full_path = utils.encrypt_file(
+                db_name=db,
                 file_path=backup_full_path,
                 encrypt_pass=encrypt_pass,
             )

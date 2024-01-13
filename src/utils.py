@@ -5,12 +5,11 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar, Any, TypeVar
+from typing import ClassVar, TypeVar
 from urllib.parse import urljoin
 
 import boto3
 import click
-from botocore import exceptions as s3_exceptions
 
 from src import settings
 from src.run import logger_ctx
@@ -96,15 +95,20 @@ def get_filename(db_name: str, suffix: str = "") -> str:
     return f"{now_time}.{db_name}.backup{suffix}"
 
 
-def encrypt_file(file_path: Path, encrypt_pass: str) -> Path:
+def encrypt_file(db_name: str, file_path: Path, encrypt_pass: str) -> Path:
     """Encrypts file by provided path (with openssl)"""
+    logger = logger_ctx.get(module_logger)
     encrypted_file_path = file_path.with_suffix(f"{file_path.suffix}.enc")
+    if encrypt_pass.startswith("env:"):
+        check_env_variables(encrypt_pass.removeprefix("env:"))
+
     encrypt_command = (
         f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {encrypt_pass} -in {file_path} "
         f"> {encrypted_file_path}"
     )
     call_with_logging(command=encrypt_command)
     call_with_logging(command=f"rm {file_path}")
+    logger.info("[%s] encryption: backup file encrypted %s", db_name, encrypted_file_path)
     return encrypted_file_path
 
 
@@ -122,9 +126,14 @@ def decrypt_file(file_path: Path, encrypt_pass: str) -> Path:
 
 
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
-    if missed_variables := [
-        variable for variable in env_variables if not getattr(settings, variable, None)
-    ]:
+    print("DB_BACKUP_ENCRYPT_PASS", os.getenv("DB_BACKUP_ENCRYPT_PASS"))
+    missed_variables = []
+    for variable in env_variables:
+        settings_var = variable.removesuffix("DB_BACKUP_")
+        if not any((os.getenv(variable), getattr(settings, settings_var))):
+            missed_variables.append(variable)
+
+    if missed_variables:
         if raise_exception:
             raise BackupError(f"Missing required variables: {tuple(missed_variables)}")
 

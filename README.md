@@ -24,7 +24,7 @@ nano .env # modify needed variables
 To get started right away (from docker container and upload to YandexDisc):
 ```shell script
 cd <path_to_project>
-pipenv run python -m src.run backup <DB_NAME> --handler docker_postgres --container postgres --s3
+poetry run backup <DB_NAME> --handler docker_postgres --container postgres --s3
 ```
 
 ### Run postgres backup via docker (local backup only)
