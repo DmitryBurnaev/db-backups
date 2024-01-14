@@ -31,7 +31,6 @@ module_logger = logging.getLogger("backup")
     type=str,
 )
 @click.option(
-    "-h",
     "--handler",
     metavar="BACKUP_HANDLER",
     required=True,
@@ -55,17 +54,17 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
-@click.option(
-    "--encrypt-pass",
-    type=str,
-    metavar="DB_BACKUP_ENCRYPT_PASS",
-    default="env:DB_BACKUP_ENCRYPT_PASS",
-    show_default=True,
-    help=f"""
-        Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
-        see details in README.md
-    """,
-)
+# @click.option(
+#     "--encrypt-pass",
+#     type=str,
+#     metavar="DB_BACKUP_ENCRYPT_PASS",
+#     default="env:DB_BACKUP_ENCRYPT_PASS",
+#     show_default=True,
+#     help=f"""
+#         Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
+#         see details in README.md
+#     """,
+# )
 @click.option(
     "-s3",
     "--copy-s3",
