@@ -6,13 +6,13 @@ Allows to back up PG and Mysql databases through their client or docker docker-c
 ### Installation
 *db-backups* requires pipenv
 ```shell script
-sudo pip install pipenv
+sudo pip install poetry
 ```
 
 ```shell script
 git clone [repository_url] <path_to_project>
 cd <path_to_project>
-pipenv install
+poetry install
 
 cp .env.template .env
 nano .env # modify needed variables
@@ -24,21 +24,21 @@ nano .env # modify needed variables
 To get started right away (from docker container and upload to YandexDisc):
 ```shell script
 cd <path_to_project>
-pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --s3
+poetry run backup <DB_NAME> --handler docker_postgres --container postgres --s3
 ```
 
 ### Run postgres backup via docker (local backup only)
 To store backup on host's directory
 ```shell script
 docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run <DB_NAME> --handler postgres --local /app/backups 
+docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
 ```
 
 ### Run postgres backup via docker (s3 backup)
 To run backup process from docker with db-backup service
 ```shell script
 docker-compose up --build
-docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3
+docker-compose run backup python -m src.run backup <DB_NAME> --handler postgres --s3
 ```
 
 ### Run postgres backup via docker (s3 backup) + encrypt
@@ -46,14 +46,14 @@ To run backup process from docker with db-backup service
 ```shell
 echo "ENCRYPT_PASS=<YOUR_SECRET_KEY>" > .env
 docker-compose up --build
-docker-compose run backup python -m src.run <DB_NAME> --handler postgres --s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
+docker-compose run backup python -m src.run backup <DB_NAME> -h postgres -s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
 ```
 
-### Command line options
+### Command line options (backup)
 ```text
-Usage: python -m src.run [OPTIONS] DB_NAME
+Usage: python -m src.run backup [OPTIONS] DB_NAME
 
-  Simple program that backups db 'DB_NAME' via specific BACKUP_HANDLER.
+  Shows file changes in the current working directory.
 
 Options:
   -h, --handler BACKUP_HANDLER    Handler, that will be used for backup
@@ -70,10 +70,12 @@ Options:
                                   'file:path_name', 'fd:number') | see details
                                   in README.md  [default:
                                   env:DB_BACKUP_ENCRYPT_PASS]
-  --s3                            Send backup to S3-like storage (requires
+  -s3, --copy-s3                  Send backup to S3-like storage (requires
                                   DB_BACKUP_S3_* env vars)
-  -l, --local                     Store backup locally (requires
+  -l, --copy-local                Store backup locally (requires
                                   DB_BACKUP_LOCAL_PATH env)
+  -v, --verbose                   Enables verbose mode.
+  --no-colors                     Disables colorized output.
   --help                          Show this message and exit.
 ```
 
@@ -98,7 +100,7 @@ crontab -e
 ### Get help
 ```shell script
 cd <path_to_project>
-pipenv run python -m src.run --help
+pipenv run python -m src.run backup --help
 ```
 
 

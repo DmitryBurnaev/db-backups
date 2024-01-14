@@ -5,17 +5,17 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar, Any, TypeVar
+from typing import ClassVar, TypeVar
 from urllib.parse import urljoin
 
 import boto3
 import click
-from botocore import exceptions as s3_exceptions
 
 from src import settings
 from src.run import logger_ctx
 
 module_logger = logging.getLogger(__name__)
+ENCRYPT_PASS = "env:DB_BACKUP_ENCRYPT_PASS"
 
 
 class BackupError(Exception):
@@ -27,6 +27,10 @@ class BackupError(Exception):
         return f"BackupError: {self.message}"
 
     __repr__ = __str__
+
+
+class EncryptBackupError(BackupError):
+    """ Custom exception for detecting encryption errors """
 
 
 def upload_to_s3(db_name: str, backup_path: Path) -> None:
@@ -96,35 +100,55 @@ def get_filename(db_name: str, suffix: str = "") -> str:
     return f"{now_time}.{db_name}.backup{suffix}"
 
 
-def encrypt_file(file_path: Path, encrypt_pass: str) -> Path:
+def _check_encrypt_vars(function):
+
+    def inner(*args, **kwargs):
+        if missed_env_var := check_env_variables(ENCRYPT_PASS.removeprefix("env:")):
+            raise EncryptBackupError(f"Missing value for env variable {missed_env_var}")
+
+        return function(*args, **kwargs)
+
+    return inner
+
+@_check_encrypt_vars
+def encrypt_file(db_name: str, file_path: Path) -> Path:
     """Encrypts file by provided path (with openssl)"""
+    logger = logger_ctx.get(module_logger)
     encrypted_file_path = file_path.with_suffix(f"{file_path.suffix}.enc")
+
     encrypt_command = (
-        f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {encrypt_pass} -in {file_path} "
+        f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {encrypted_file_path}"
     )
     call_with_logging(command=encrypt_command)
     call_with_logging(command=f"rm {file_path}")
+    logger.info("[%s] encryption: backup file encrypted %s", db_name, encrypted_file_path)
     return encrypted_file_path
 
-
-def decrypt_file(file_path: Path, encrypt_pass: str) -> Path:
+@_check_encrypt_vars
+def decrypt_file(db_name: str, file_path: Path) -> Path:
     """Decrypts file by provided path (with openssl)"""
+    logger = logger_ctx.get(module_logger)
     decrypted_file_path = f"{file_path}.dec"
     decrypt_command = (
-        f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {encrypt_pass} -in {file_path} "
+        f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {decrypted_file_path}"
     )
     replace_command = f"rm {file_path} && mv {decrypted_file_path} {file_path}"
     call_with_logging(decrypt_command)
     call_with_logging(replace_command)
+    logger.info("[%s] decryption: backup file decrypted %s", db_name, decrypted_file_path)
     return file_path
 
 
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
-    if missed_variables := [
-        variable for variable in env_variables if not getattr(settings, variable, None)
-    ]:
+    missed_variables = []
+    for variable in env_variables:
+        settings_var = variable.removesuffix("DB_BACKUP_")
+        if not any((os.getenv(variable), getattr(settings, settings_var))):
+            missed_variables.append(variable)
+
+    if missed_variables:
         if raise_exception:
             raise BackupError(f"Missing required variables: {tuple(missed_variables)}")
 
@@ -216,10 +240,9 @@ T = TypeVar("T")
 
 
 def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str]) -> T:
-    if value:
-        if missed_vars := [variable for variable in required_vars if not os.getenv(variable)]:
-            raise click.UsageError(
-                f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"
-            )
+    if value and (missed_vars := check_env_variables(required_vars, raise_exception=False)):
+        raise click.UsageError(
+            f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"
+        )
 
     return value
