@@ -94,6 +94,9 @@ class MySQLHandler(BaseHandler):
         """
         return call_with_logging(command=backup_command.format(**command_kwargs))
 
+    def _do_restore(self) -> None:
+        return call_with_logging(command=f"echo '{self.db_name} should be restored....'")
+
 
 class PGHandler(BaseHandler):
     """Backup PG database from postgres server (via pg_dump)"""

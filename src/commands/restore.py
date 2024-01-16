@@ -95,25 +95,29 @@ def cli(
         logger.critical("Unknown handler '%s'", handler)
         exit(1)
 
-    try:
-        backup_full_path = backup_handler()
+    logger.info("Run restore logic...")
+    # TODO: move logic to common
 
-        if encrypt:
-            backup_full_path = utils.encrypt_file(
-                db_name=db,
-                file_path=backup_full_path,
-                encrypt_pass=encrypt_pass,
-            )
-
-        if copy_local:
-            utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
-
-        if copy_s3:
-            utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
-
-    except Exception as exc:
-        logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
-        exit(2)
-
-    utils.remove_file(backup_full_path)
-    logger.info("[%s] BACKUP SUCCESS", db)
+    #
+    # try:
+    #     backup_full_path = backup_handler()
+    #
+    #     if encrypt:
+    #         backup_full_path = utils.encrypt_file(
+    #             db_name=db,
+    #             file_path=backup_full_path,
+    #             encrypt_pass=encrypt_pass,
+    #         )
+    #
+    #     if copy_local:
+    #         utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
+    #
+    #     if copy_s3:
+    #         utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
+    #
+    # except Exception as exc:
+    #     logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
+    #     exit(2)
+    #
+    # utils.remove_file(backup_full_path)
+    # logger.info("[%s] BACKUP SUCCESS", db)
