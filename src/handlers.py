@@ -28,7 +28,7 @@ class BaseHandler(ABC):
         self.compressed_backup_path = settings.TMP_BACKUP_DIR / f"{self.backup_filename}.tar.gz"
         self.extra_kwargs = extra_kwargs
 
-    def __call__(self, **kwargs) -> Path:
+    def backup(self) -> Path:
         self.logger.info(f"[%s] handle backup via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         backup_stdout = self._do_backup()
@@ -54,8 +54,15 @@ class BaseHandler(ABC):
         )
         return self.compressed_backup_path
 
+    def restore(self, file_path: Path) -> None:
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def _do_backup(self) -> str:
+        ...
+
+    @abc.abstractmethod
+    def _do_restore(self) -> str:
         ...
 
     def _do_archive(self) -> str:

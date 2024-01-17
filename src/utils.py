@@ -110,6 +110,7 @@ def _check_encrypt_vars(function):
 
     return inner
 
+
 @_check_encrypt_vars
 def encrypt_file(db_name: str, file_path: Path) -> Path:
     """Encrypts file by provided path (with openssl)"""
@@ -125,11 +126,12 @@ def encrypt_file(db_name: str, file_path: Path) -> Path:
     logger.info("[%s] encryption: backup file encrypted %s", db_name, encrypted_file_path)
     return encrypted_file_path
 
+
 @_check_encrypt_vars
 def decrypt_file(db_name: str, file_path: Path) -> Path:
     """Decrypts file by provided path (with openssl)"""
     logger = logger_ctx.get(module_logger)
-    decrypted_file_path = f"{file_path}.dec"
+    decrypted_file_path = Path(str(file_path).removesuffix(".enc"))
     decrypt_command = (
         f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {decrypted_file_path}"

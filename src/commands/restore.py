@@ -36,7 +36,7 @@ module_logger = logging.getLogger("backup")
     required=True,
     show_choices=HANDLERS.keys(),
     type=click.Choice(list(HANDLERS.keys())),
-    help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
+    help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
 )
 @click.option(
     "-dc",
@@ -49,21 +49,20 @@ module_logger = logging.getLogger("backup")
     """,
 )
 @click.option(
-    "-e",
-    "--encrypt",
+    "--decrypt",
     is_flag=True,
-    help="Turn ON backup's encryption (with openssl)",
+    help="Turn ON backup's decryption (with openssl)",
 )
 @click.option(
     "-s3",
-    "--copy-s3",
+    "--from-s3",
     is_flag=True,
     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["s3"]),
 )
 @click.option(
     "-l",
-    "--copy-local",
+    "--from-local",
     is_flag=True,
     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["local"]),
@@ -74,10 +73,9 @@ def cli(
     handler: str,
     db: str,
     docker_container: str | None,
-    encrypt: bool,
-    encrypt_pass: str | None,
-    copy_s3: bool,
-    copy_local: bool,
+    decrypt: bool,
+    from_s3: bool,
+    from_local: bool,
     verbose: bool,
     no_colors: bool,
 ):
@@ -98,26 +96,24 @@ def cli(
     logger.info("Run restore logic...")
     # TODO: move logic to common
 
-    #
-    # try:
-    #     backup_full_path = backup_handler()
-    #
-    #     if encrypt:
-    #         backup_full_path = utils.encrypt_file(
-    #             db_name=db,
-    #             file_path=backup_full_path,
-    #             encrypt_pass=encrypt_pass,
-    #         )
-    #
-    #     if copy_local:
-    #         utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
-    #
-    #     if copy_s3:
-    #         utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
-    #
-    # except Exception as exc:
-    #     logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
-    #     exit(2)
-    #
-    # utils.remove_file(backup_full_path)
-    # logger.info("[%s] BACKUP SUCCESS", db)
+    try:
+        if from_local:
+            # TODO: find backup file in local:
+            backup_full_path = utils.copy_file(db_name=db, dst=settings.LOCAL_PATH)
+        elif from_s3:
+            # TODO: find backup file in s3:
+            backup_full_path = utils.upload_to_s3(db_name=db)
+        else:
+            backup_full_path = ...
+
+        if decrypt:
+            backup_full_path = utils.decrypt_file(db_name=db, file_path=backup_full_path)
+
+        backup_handler.restore(backup_full_path)
+
+    except Exception as exc:
+        logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
+        exit(2)
+
+    utils.remove_file(backup_full_path)
+    logger.info("[%s] BACKUP SUCCESS", db)
