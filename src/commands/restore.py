@@ -98,8 +98,10 @@ def cli(
 
     try:
         if from_local:
-            # TODO: find backup file in local:
-            backup_full_path = utils.copy_file(db_name=db, dst=settings.LOCAL_PATH)
+            backup_full_path = utils.find_last_file_in_directory(
+                db_name=db,
+                directory=settings.LOCAL_PATH,
+            )
         elif from_s3:
             # TODO: find backup file in s3:
             backup_full_path = utils.upload_to_s3(db_name=db)

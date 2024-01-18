@@ -185,6 +185,16 @@ def remove_file(file_path: Path):
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
 
 
+def find_last_file_in_directory(db_name: str, directory: Path) -> Path:
+    """
+    Finds the last backup file in the given directory
+    """
+    logger = logger_ctx.get(module_logger)
+    logger.debug("[%s] Finding last backup file in provided dir: %s", db_name, directory)
+    # TODO: write logic for finding backup file here
+    return Path(directory / f"{directory}.tar.gz").resolve()
+
+
 @dataclasses.dataclass
 class LoggerContext:
     """Extended logging (standard logging + click echo) with turning-off verbose mode"""
