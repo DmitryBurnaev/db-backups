@@ -4,6 +4,7 @@ import logging
 import subprocess
 import sys
 from datetime import datetime
+from operator import itemgetter
 from pathlib import Path
 from typing import ClassVar, TypeVar
 from urllib.parse import urljoin
@@ -33,6 +34,10 @@ class EncryptBackupError(BackupError):
     """ Custom exception for detecting encryption errors """
 
 
+class RestoreBackupError(BackupError):
+    """ Custom exception for restoring logic """
+
+
 def upload_to_s3(db_name: str, backup_path: Path) -> None:
     """Allows to upload src_filename to S3 storage"""
     logger = logger_ctx.get(module_logger)
@@ -60,6 +65,47 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
 
     except Exception as exc:
         logger.exception("Couldn't upload result backup to s3")
+        raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc
+
+    result_url = urljoin(settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path))
+    logger.info("[%s] backup uploaded to s3: %s", db_name, result_url)
+
+
+def download_from_s3(db_name: str, backup_path: Path, backup_date: datetime.date) -> Path:
+    """Allows to fetch last backup from provided S3 bucket"""
+    logger = logger_ctx.get(module_logger)
+    check_env_variables(
+        "S3_STORAGE_URL",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_REGION_NAME",
+    )
+    session = boto3.session.Session(
+        aws_access_key_id=settings.S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+        region_name=settings.S3_REGION_NAME,
+    )
+    s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
+    session.get_available_resources()
+    dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
+    try:
+        prefix = backup_date.strftime("%Y-%m-%d")
+        logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
+        list_objects = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, prefix=prefix)
+        objects = sorted(list_objects["Contents"], key=itemgetter("Key"), reverse=True)
+        print(objects)
+        if not objects:
+            raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
+
+        # TODO: implement downloading logic
+        s3.download_file(
+            Bucket=settings.S3_BUCKET_NAME,
+            Key=objects[0]["Key"],
+            Path=dst_path
+        )
+
+    except Exception as exc:
+        logger.exception("Couldn't download result backup to s3")
         raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc
 
     result_url = urljoin(settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path))

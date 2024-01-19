@@ -1,3 +1,4 @@
+import datetime
 import logging
 from functools import partial
 
@@ -104,7 +105,11 @@ def cli(
             )
         elif from_s3:
             # TODO: find backup file in s3:
-            backup_full_path = utils.upload_to_s3(db_name=db)
+            backup_full_path = utils.download_from_s3(
+                db_name=db,
+                # TODO: replace with user's requested date
+                backup_date=datetime.datetime.now().date()
+            )
         else:
             backup_full_path = ...
 
