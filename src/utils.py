@@ -14,6 +14,7 @@ import click
 
 from src import settings
 from src.run import logger_ctx
+from src.settings import DATE_FORMAT
 
 module_logger = logging.getLogger(__name__)
 ENCRYPT_PASS = "env:DB_BACKUP_ENCRYPT_PASS"
@@ -31,11 +32,11 @@ class BackupError(Exception):
 
 
 class EncryptBackupError(BackupError):
-    """ Custom exception for detecting encryption errors """
+    """Custom exception for detecting encryption errors"""
 
 
 class RestoreBackupError(BackupError):
-    """ Custom exception for restoring logic """
+    """Custom exception for restoring logic"""
 
 
 def upload_to_s3(db_name: str, backup_path: Path) -> None:
@@ -71,7 +72,7 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
     logger.info("[%s] backup uploaded to s3: %s", db_name, result_url)
 
 
-def download_from_s3(db_name: str, backup_path: Path, backup_date: datetime.date) -> Path:
+def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
     """Allows to fetch last backup from provided S3 bucket"""
     logger = logger_ctx.get(module_logger)
     check_env_variables(
@@ -89,7 +90,7 @@ def download_from_s3(db_name: str, backup_path: Path, backup_date: datetime.date
     session.get_available_resources()
     dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
-        prefix = backup_date.strftime("%Y-%m-%d")
+        prefix = date.strftime("%Y-%m-%d")
         logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         list_objects = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, prefix=prefix)
         objects = sorted(list_objects["Contents"], key=itemgetter("Key"), reverse=True)
@@ -98,11 +99,7 @@ def download_from_s3(db_name: str, backup_path: Path, backup_date: datetime.date
             raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
 
         # TODO: implement downloading logic
-        s3.download_file(
-            Bucket=settings.S3_BUCKET_NAME,
-            Key=objects[0]["Key"],
-            Path=dst_path
-        )
+        s3.download_file(Bucket=settings.S3_BUCKET_NAME, Key=objects[0]["Key"], Path=dst_path)
 
     except Exception as exc:
         logger.exception("Couldn't download result backup to s3")
@@ -147,7 +144,6 @@ def get_filename(db_name: str, suffix: str = "") -> str:
 
 
 def _check_encrypt_vars(function):
-
     def inner(*args, **kwargs):
         if missed_env_var := check_env_variables(ENCRYPT_PASS.removeprefix("env:")):
             raise EncryptBackupError(f"Missing value for env variable {missed_env_var}")
@@ -231,14 +227,27 @@ def remove_file(file_path: Path):
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
 
 
-def find_last_file_in_directory(db_name: str, directory: Path) -> Path:
+def find_local_file_by_date(db_name: str, date: datetime.date, directory: Path) -> Path:
     """
     Finds the last backup file in the given directory
     """
     logger = logger_ctx.get(module_logger)
     logger.debug("[%s] Finding last backup file in provided dir: %s", db_name, directory)
-    # TODO: write logic for finding backup file here
-    return Path(directory / f"{directory}.tar.gz").resolve()
+    date = date.strftime(DATE_FORMAT)
+
+    def validate_backup_file_name(file_name: str) -> bool:
+        if file_name.startswith(date):
+            return file_name.endswith("tar.gz") or file_name.endswith("tar.gz.enc")
+
+        return False
+
+    dir_files = sorted(filter(validate_backup_file_name, os.listdir(directory)), reverse=True)
+    if not dir_files:
+        raise RestoreBackupError(f"No backup files found for date {date}")
+
+    result_path = Path(directory) / dir_files[0]
+    logger.debug("[%s] Last backup found: %s", db_name, result_path)
+    return result_path
 
 
 @dataclasses.dataclass

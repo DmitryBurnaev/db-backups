@@ -1,14 +1,13 @@
 import datetime
 import logging
-from functools import partial
 
 import click
 
 from src import utils, settings
 from src.handlers import HANDLERS
-from src.constants import ENCRYPTION_PASS
 from src.run import logger_ctx
-from src.utils import LoggerContext, validate_envar_option
+from src.settings import DATE_FORMAT
+from src.utils import LoggerContext
 
 ENV_VARS_REQUIRES = {
     "s3": (
@@ -23,6 +22,7 @@ ENV_VARS_REQUIRES = {
     "encrypt": ("DB_BACKUP_LOCAL_PATH",),
 }
 module_logger = logging.getLogger("backup")
+BACKUP_SOURCE = ("S3", "LOCAL")
 
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
@@ -33,11 +33,27 @@ module_logger = logging.getLogger("backup")
 )
 @click.option(
     "--handler",
-    metavar="BACKUP_HANDLER",
+    metavar="RESTORE_HANDLER",
     required=True,
     show_choices=HANDLERS.keys(),
     type=click.Choice(list(HANDLERS.keys())),
     help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
+)
+@click.option(
+    "--source",
+    metavar="BACKUP_SOURCE",
+    required=True,
+    show_choices=BACKUP_SOURCE,
+    type=click.Choice(list(BACKUP_SOURCE)),
+    help="Source of backup file, that will be used for downloading/copying",
+)
+@click.option(
+    "---date",
+    metavar="BACKUP_DATE",
+    show_choices=BACKUP_SOURCE,
+    default=datetime.date.today().strftime(DATE_FORMAT),
+    type=click.DateTime(formats=[DATE_FORMAT]),
+    help=f"Specific date (in ISO format: {DATE_FORMAT}) for restoring backup (today by default)",
 )
 @click.option(
     "-dc",
@@ -54,29 +70,15 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's decryption (with openssl)",
 )
-@click.option(
-    "-s3",
-    "--from-s3",
-    is_flag=True,
-    help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["s3"]),
-)
-@click.option(
-    "-l",
-    "--from-local",
-    is_flag=True,
-    help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["local"]),
-)
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    handler: str,
     db: str,
+    handler: str,
+    source: str,
+    date: datetime.date,
     docker_container: str | None,
     decrypt: bool,
-    from_s3: bool,
-    from_local: bool,
     verbose: bool,
     no_colors: bool,
 ):
@@ -95,24 +97,22 @@ def cli(
         exit(1)
 
     logger.info("Run restore logic...")
-    # TODO: move logic to common
 
-    try:
-        if from_local:
-            backup_full_path = utils.find_last_file_in_directory(
+    match source:
+        case "LOCAL":
+            backup_full_path = utils.find_local_file_by_date(
                 db_name=db,
+                date=date,
                 directory=settings.LOCAL_PATH,
             )
-        elif from_s3:
-            # TODO: find backup file in s3:
-            backup_full_path = utils.download_from_s3(
-                db_name=db,
-                # TODO: replace with user's requested date
-                backup_date=datetime.datetime.now().date()
-            )
-        else:
-            backup_full_path = ...
+        case "S3":
+            backup_full_path = utils.download_from_s3_by_date(db_name=db, date=date)
 
+        case _:
+            logger.critical("Unknown source '%s'", source)
+            exit(1)
+
+    try:
         if decrypt:
             backup_full_path = utils.decrypt_file(db_name=db, file_path=backup_full_path)
 

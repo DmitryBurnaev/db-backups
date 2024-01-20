@@ -57,3 +57,5 @@ LOGGING = {
     "loggers": {"": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": True}},
     # "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
 }
+
+DATE_FORMAT = "%Y-%m-%d"

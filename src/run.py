@@ -34,7 +34,7 @@ class ComplexCLI(click.Group):
     cmd_folder = settings.SRC_DIR / "commands"
 
     def list_commands(self, ctx: click.Context):
-        """ Reads subdirectory 'commands' and adds them to the commands list """
+        """Reads subdirectory 'commands' and adds them to the commands list"""
         rv = []
         for filename in os.listdir(self.cmd_folder):
             if filename.endswith(".py") and not filename.startswith("__"):
