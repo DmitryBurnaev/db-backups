@@ -88,25 +88,31 @@ def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
     )
     s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
     session.get_available_resources()
-    dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
         prefix = date.strftime("%Y-%m-%d")
-        logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         list_objects = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, prefix=prefix)
         objects = sorted(list_objects["Contents"], key=itemgetter("Key"), reverse=True)
         print(objects)
         if not objects:
             raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
 
+        file_name = objects[0]["Key"]
+        result_path = settings.TMP_BACKUP_DIR / file_name
+        logger.debug(
+            "Executing request (download) from S3: %s/%s -> %s",
+            settings.S3_DST_PATH,
+            file_name,
+            result_path,
+        )
         # TODO: implement downloading logic
-        s3.download_file(Bucket=settings.S3_BUCKET_NAME, Key=objects[0]["Key"], Path=dst_path)
+        s3.download_file(Bucket=settings.S3_BUCKET_NAME, Path=settings.S3_DST_PATH, Key=file_name)
 
     except Exception as exc:
-        logger.exception("Couldn't download result backup to s3")
-        raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc
+        logger.exception("Couldn't download result backup from s3")
+        raise RestoreBackupError(f"Couldn't download result backup from s3: {exc!r}") from exc
 
-    result_url = urljoin(settings.S3_STORAGE_URL, os.path.join(settings.S3_BUCKET_NAME, dst_path))
-    logger.info("[%s] backup uploaded to s3: %s", db_name, result_url)
+    logger.info("[%s] backup downloaded from s3: %s", db_name, result_path)
+    return result_path
 
 
 def call_with_logging(command: str):
