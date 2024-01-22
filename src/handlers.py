@@ -10,7 +10,7 @@ from src.utils import (
     call_with_logging,
     get_filename,
     BackupError,
-    check_env_variables,
+    check_env_variables, RestoreBackupError,
 )
 
 module_logger = logging.getLogger(__name__)
@@ -55,6 +55,11 @@ class BaseHandler(ABC):
         return self.compressed_backup_path
 
     def restore(self, file_path: Path) -> None:
+        self.logger.info(f"[%s] handle restore via %s ... ", self.db_name, self.service)
+        check_env_variables(*self.required_variables)
+        if not self.backup_path.exists():
+            raise RestoreBackupError(f"Backup doesn't exist {self.backup_path}")
+
         raise NotImplementedError()
 
     @abc.abstractmethod

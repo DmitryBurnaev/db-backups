@@ -105,7 +105,11 @@ def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
             result_path,
         )
         # TODO: implement downloading logic
-        s3.download_file(Bucket=settings.S3_BUCKET_NAME, Path=settings.S3_DST_PATH, Key=file_name)
+        s3.download_file(
+            Bucket=settings.S3_BUCKET_NAME,
+            Object=settings.S3_DST_PATH / file_name,
+            Filename=result_path
+        )
 
     except Exception as exc:
         logger.exception("Couldn't download result backup from s3")
