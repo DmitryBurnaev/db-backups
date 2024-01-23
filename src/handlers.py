@@ -167,6 +167,15 @@ class DockerPGHandler(BaseHandler):
         call_with_logging(command=self._wrap_do_in_docker(f"rm {backup_in_container_path}"))
         return stdout
 
+    def _do_restore(self) -> str:
+        drop_old_db_command = """
+            PGPASSWORD="{password}" psql -h {host} -p {port} -U {user} 
+            -c "drop database {self.db_name}"
+        """
+        call_with_logging(drop_old_db_command)
+        # TODO: extend logic
+        pass
+
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'
 
