@@ -168,12 +168,19 @@ class DockerPGHandler(BaseHandler):
         return stdout
 
     def _do_restore(self) -> str:
-        drop_old_db_command = """
-            PGPASSWORD="{password}" psql -h {host} -p {port} -U {user} 
-            -c "drop database {self.db_name}"
-        """
-        call_with_logging(drop_old_db_command)
-        # TODO: extend logic
+        command_kwargs = {
+            "host": settings.PG_HOST,
+            "port": settings.PG_PORT,
+            "user": settings.PG_USER,
+            "password": settings.PG_PASSWORD,
+            "db_name": self.db_name,
+            "backup_path": self.backup_path,
+        }
+        drop_old_db_command = (
+            "PGPASSWORD=\"{password}\" psql -h {host} -p {port} -U {user}"
+            "-c \"drop database {self.db_name}\""
+        )
+        call_with_logging(drop_old_db_command.format(**command_kwargs))
         pass
 
     def _wrap_do_in_docker(self, command: str) -> str:
