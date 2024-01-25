@@ -13,11 +13,13 @@ import boto3
 import click
 
 from src import settings
+from src.constants import ENV_VARS_REQUIRES
 from src.run import logger_ctx
 from src.settings import DATE_FORMAT
 
 module_logger = logging.getLogger(__name__)
 ENCRYPT_PASS = "env:DB_BACKUP_ENCRYPT_PASS"
+T = TypeVar("T")
 
 
 class BackupError(Exception):
@@ -313,10 +315,8 @@ class LoggerContext:
         self.logger.log(level, msg, *args, exc_info=exception)
 
 
-T = TypeVar("T")
-
-
-def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str]) -> T:
+def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str] | None = None) -> T:
+    required_vars = required_vars or ENV_VARS_REQUIRES.get(value)
     if value and (missed_vars := check_env_variables(required_vars, raise_exception=False)):
         raise click.UsageError(
             f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"

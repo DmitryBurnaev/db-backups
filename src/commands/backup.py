@@ -5,22 +5,10 @@ import click
 
 from src import utils, settings
 from src.handlers import HANDLERS
-from src.constants import ENCRYPTION_PASS
+from src.constants import ENV_VARS_REQUIRES
 from src.run import logger_ctx
 from src.utils import LoggerContext, validate_envar_option
 
-ENV_VARS_REQUIRES = {
-    "s3": (
-        "DB_BACKUP_S3_REGION_NAME",
-        "DB_BACKUP_S3_STORAGE_URL",
-        "DB_BACKUP_S3_ACCESS_KEY_ID",
-        "DB_BACKUP_S3_SECRET_ACCESS_KEY",
-        "DB_BACKUP_S3_BUCKET_NAME",
-        "DB_BACKUP_S3_PATH",
-    ),
-    "local": ("DB_BACKUP_LOCAL_PATH",),
-    "encrypt": ("DB_BACKUP_LOCAL_PATH",),
-}
 module_logger = logging.getLogger("backup")
 
 

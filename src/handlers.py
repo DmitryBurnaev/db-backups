@@ -7,10 +7,11 @@ from typing import ClassVar, Type
 from src import settings
 from src.run import logger_ctx
 from src.utils import (
+    check_env_variables,
     call_with_logging,
-    get_filename,
     BackupError,
-    check_env_variables, RestoreBackupError,
+    get_filename,
+    RestoreBackupError,
 )
 
 module_logger = logging.getLogger(__name__)
@@ -60,14 +61,14 @@ class BaseHandler(ABC):
         if not self.backup_path.exists():
             raise RestoreBackupError(f"Backup doesn't exist {self.backup_path}")
 
-        raise NotImplementedError()
+        self._do_restore(file_path)
 
     @abc.abstractmethod
     def _do_backup(self) -> str:
         ...
 
     @abc.abstractmethod
-    def _do_restore(self) -> str:
+    def _do_restore(self, file_path: Path) -> None:
         ...
 
     def _do_archive(self) -> str:
@@ -106,7 +107,7 @@ class MySQLHandler(BaseHandler):
         """
         return call_with_logging(command=backup_command.format(**command_kwargs))
 
-    def _do_restore(self) -> None:
+    def _do_restore(self, file_path: Path) -> None:
         return call_with_logging(command=f"echo '{self.db_name} should be restored....'")
 
 
@@ -136,6 +137,9 @@ class PGHandler(BaseHandler):
             PGPASSWORD="{password}" {pg_dump_bin} -h {host} -p {port} -U {user} -d {db_name} -f {backup_path}    
         """
         return call_with_logging(command=backup_command.format(**command_kwargs))
+
+    def _do_restore(self, file_path: Path) -> None:
+        pass
 
 
 class DockerPGHandler(BaseHandler):
@@ -167,7 +171,7 @@ class DockerPGHandler(BaseHandler):
         call_with_logging(command=self._wrap_do_in_docker(f"rm {backup_in_container_path}"))
         return stdout
 
-    def _do_restore(self) -> str:
+    def _do_restore(self, file_path: Path) -> None:
         command_kwargs = {
             "host": settings.PG_HOST,
             "port": settings.PG_PORT,
@@ -181,7 +185,6 @@ class DockerPGHandler(BaseHandler):
             "-c \"drop database {self.db_name}\""
         )
         call_with_logging(drop_old_db_command.format(**command_kwargs))
-        pass
 
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'

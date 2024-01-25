@@ -1,26 +1,16 @@
 import datetime
 import logging
+from functools import partial
 
 import click
 
 from src import utils, settings
+from src.constants import ENV_VARS_REQUIRES
 from src.handlers import HANDLERS
 from src.run import logger_ctx
 from src.settings import DATE_FORMAT
-from src.utils import LoggerContext
+from src.utils import LoggerContext, validate_envar_option
 
-ENV_VARS_REQUIRES = {
-    "s3": (
-        "DB_BACKUP_S3_REGION_NAME",
-        "DB_BACKUP_S3_STORAGE_URL",
-        "DB_BACKUP_S3_ACCESS_KEY_ID",
-        "DB_BACKUP_S3_SECRET_ACCESS_KEY",
-        "DB_BACKUP_S3_BUCKET_NAME",
-        "DB_BACKUP_S3_PATH",
-    ),
-    "local": ("DB_BACKUP_LOCAL_PATH",),
-    "encrypt": ("DB_BACKUP_LOCAL_PATH",),
-}
 module_logger = logging.getLogger("backup")
 BACKUP_SOURCE = ("S3", "LOCAL")
 
@@ -44,13 +34,13 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     metavar="BACKUP_SOURCE",
     required=True,
     show_choices=BACKUP_SOURCE,
+    callback=validate_envar_option,
     type=click.Choice(list(BACKUP_SOURCE)),
-    help="Source of backup file, that will be used for downloading/copying",
+    help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_SOURCE}",
 )
 @click.option(
-    "---date",
+    "--date",
     metavar="BACKUP_DATE",
-    show_choices=BACKUP_SOURCE,
     default=datetime.date.today().strftime(DATE_FORMAT),
     type=click.DateTime(formats=[DATE_FORMAT]),
     help=f"Specific date (in ISO format: {DATE_FORMAT}) for restoring backup (today by default)",
@@ -69,6 +59,7 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     "--decrypt",
     is_flag=True,
     help="Turn ON backup's decryption (with openssl)",
+    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["ENCRYPT"]),
 )
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
