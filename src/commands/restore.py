@@ -82,7 +82,7 @@ def cli(
         exit(1)
 
     try:
-        backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+        restore_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
     except KeyError:
         logger.critical("Unknown handler '%s'", handler)
         exit(1)
@@ -107,7 +107,7 @@ def cli(
         if decrypt:
             backup_full_path = utils.decrypt_file(db_name=db, file_path=backup_full_path)
 
-        backup_handler.restore(backup_full_path)
+        restore_handler.restore(backup_full_path)
 
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)

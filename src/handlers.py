@@ -58,10 +58,12 @@ class BaseHandler(ABC):
     def restore(self, file_path: Path) -> None:
         self.logger.info(f"[%s] handle restore via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
+        self.backup_path = file_path
         if not self.backup_path.exists():
             raise RestoreBackupError(f"Backup doesn't exist {self.backup_path}")
 
         self._do_restore(file_path)
+        self._do_clean()
 
     @abc.abstractmethod
     def _do_backup(self) -> str:
