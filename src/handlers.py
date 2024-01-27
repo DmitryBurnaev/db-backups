@@ -4,6 +4,8 @@ from abc import ABC
 from pathlib import Path
 from typing import ClassVar, Type
 
+import click
+
 from src import settings
 from src.run import logger_ctx
 from src.utils import (
@@ -174,6 +176,11 @@ class DockerPGHandler(BaseHandler):
         return stdout
 
     def _do_restore(self, file_path: Path) -> None:
+        if self._check_db_exists():
+            if click.confirm(f"Do you want to remove already created DB {self.db_name}?"):
+                self.logger.info(f"[%s] Removing existing DB...", self.db_name)
+                self._remove_db()
+
         command_kwargs = {
             "host": settings.PG_HOST,
             "port": settings.PG_PORT,
@@ -190,6 +197,14 @@ class DockerPGHandler(BaseHandler):
 
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'
+
+    def _check_db_exists(self):
+        self.logger.debug(f"[%s] check DB exists...", self.db_name)
+        # TODO: implement cheking logic
+
+    def _remove_db(self):
+        self.logger.debug(f"[%s] removing exists DB ...", self.db_name)
+        # TODO: implement remove logic
 
 
 HANDLERS: dict[str, Type[BaseHandler]] = {
