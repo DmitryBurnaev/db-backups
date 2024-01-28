@@ -323,3 +323,11 @@ def validate_envar_option(_, param: click.Option, value: T, required_vars: list[
         )
 
     return value
+
+
+def split_option_values(_, param: click.Option, values: str, split_char: str = ",") -> list[str]:
+    split_values = [v.strip() for v in values.split(split_char)]
+    for value in split_values:
+        validate_envar_option(_, param, value)
+
+    return split_values

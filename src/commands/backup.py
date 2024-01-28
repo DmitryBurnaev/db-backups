@@ -5,20 +5,21 @@ import click
 
 from src import utils, settings
 from src.handlers import HANDLERS
-from src.constants import ENV_VARS_REQUIRES
+from src.constants import ENV_VARS_REQUIRES, BACKUP_LOCATIONS
 from src.run import logger_ctx
-from src.utils import LoggerContext, validate_envar_option
+from src.utils import LoggerContext, validate_envar_option, split_option_values
 
 module_logger = logging.getLogger("backup")
 
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
 @click.argument(
-    "db",
+    "DB",
     metavar="DB_NAME",
     type=str,
 )
 @click.option(
+    "-H",
     "--handler",
     metavar="BACKUP_HANDLER",
     required=True,
@@ -27,7 +28,7 @@ module_logger = logging.getLogger("backup")
     help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
-    "-dc",
+    "-C",
     "--docker-container",
     metavar="CONTAINER_NAME",
     type=str,
@@ -37,38 +38,49 @@ module_logger = logging.getLogger("backup")
     """,
 )
 @click.option(
-    "-e",
+    "-E",
     "--encrypt",
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
 @click.option(
-    "-s3",
-    "--copy-s3",
-    is_flag=True,
-    help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["s3"]),
+    "-D",
+    "--destination",
+    required=True,
+    # multiple=True,
+    type=click.STRING,
+    help=f"Move result backup file to the specific place: {BACKUP_LOCATIONS}",
+    callback=split_option_values,
 )
-@click.option(
-    "-l",
-    "--copy-local",
-    is_flag=True,
-    help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["local"]),
-)
-@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
+# @click.option(
+#     "-s3",
+#     "--copy-s3",
+#     is_flag=True,
+#     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
+#     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["S3"]),
+# )
+# @click.option(
+#     "-l",
+#     "--copy-local",
+#     is_flag=True,
+#     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
+#     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["LOCAL"]),
+# )
+@click.option("-V", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    handler: str,
-    db: str,
-    docker_container: str | None,
-    encrypt: bool,
-    encrypt_pass: str | None,
-    copy_s3: bool,
-    copy_local: bool,
-    verbose: bool,
-    no_colors: bool,
+    **kwargs,
+    # db: str,
+    # handler: str,
+    # docker_container: str | None,
+    # encrypt: bool,
+    # destination: tuple[str, ...],
+    # # copy_s3: bool,
+    # # copy_local: bool,
+    # verbose: bool,
+    # no_colors: bool,
 ):
+    print(kwargs)
     """Shows file changes in the current working directory."""
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)

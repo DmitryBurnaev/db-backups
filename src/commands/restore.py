@@ -22,6 +22,7 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     type=str,
 )
 @click.option(
+    "-H",
     "--handler",
     metavar="RESTORE_HANDLER",
     required=True,
