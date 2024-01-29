@@ -9,7 +9,7 @@ from src.constants import ENV_VARS_REQUIRES
 from src.handlers import HANDLERS
 from src.run import logger_ctx
 from src.settings import DATE_FORMAT
-from src.utils import LoggerContext, validate_envar_option
+from src.utils import LoggerContext, validate_envar_option, split_option_values
 
 module_logger = logging.getLogger("backup")
 BACKUP_SOURCE = ("S3", "LOCAL")

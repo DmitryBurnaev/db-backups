@@ -47,9 +47,11 @@ module_logger = logging.getLogger("backup")
     "-D",
     "--destination",
     required=True,
-    # multiple=True,
     type=click.STRING,
-    help=f"Move result backup file to the specific place: {BACKUP_LOCATIONS}",
+    help=(
+        f"Comma separated list of dst places (result backup file will be moved to). "
+        f"Possible values: {BACKUP_LOCATIONS}"
+    ),
     callback=split_option_values,
 )
 # @click.option(
