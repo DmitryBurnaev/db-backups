@@ -4,7 +4,7 @@ from functools import partial
 import click
 
 from src import utils, settings
-from src.handlers import HANDLERS
+from src.handlers import HANDLERS, BaseHandler
 from src.constants import ENV_VARS_REQUIRES, BACKUP_LOCATIONS
 from src.run import logger_ctx
 from src.utils import LoggerContext, validate_envar_option, split_option_values
@@ -71,18 +71,18 @@ module_logger = logging.getLogger("backup")
 @click.option("-V", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    **kwargs,
-    # db: str,
-    # handler: str,
-    # docker_container: str | None,
-    # encrypt: bool,
-    # destination: tuple[str, ...],
-    # # copy_s3: bool,
-    # # copy_local: bool,
-    # verbose: bool,
-    # no_colors: bool,
+    # **kwargs,
+    db: str,
+    handler: str,
+    docker_container: str | None,
+    encrypt: bool,
+    destination: tuple[str, ...],
+    # copy_s3: bool,
+    # copy_local: bool,
+    verbose: bool,
+    no_colors: bool,
 ):
-    print(kwargs)
+    # print(kwargs)
     """Shows file changes in the current working directory."""
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
@@ -92,25 +92,21 @@ def cli(
         exit(1)
 
     try:
-        backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+        backup_handler: BaseHandler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
     except KeyError:
         logger.critical("Unknown handler '%s'", handler)
         exit(1)
 
     try:
-        backup_full_path = backup_handler()
+        backup_full_path = backup_handler.backup()
 
         if encrypt:
-            backup_full_path = utils.encrypt_file(
-                db_name=db,
-                file_path=backup_full_path,
-                encrypt_pass=encrypt_pass,
-            )
+            backup_full_path = utils.encrypt_file(db_name=db, file_path=backup_full_path)
 
-        if copy_local:
+        if "LOCAL" in destination:
             utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
 
-        if copy_s3:
+        if "S3" in destination:
             utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
 
     except Exception as exc:

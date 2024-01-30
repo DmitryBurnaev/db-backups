@@ -2,6 +2,10 @@ import os
 import tempfile
 from pathlib import Path
 
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
+
 BASE_DIR = Path(os.path.dirname(os.path.dirname(__file__)))
 SRC_DIR = BASE_DIR / "src"
 LOG_DIR = Path(os.getenv("DB_BACKUP_LOG_DIR", BASE_DIR / "log"))
@@ -32,7 +36,6 @@ S3_DST_PATH = os.getenv("DB_BACKUP_S3_PATH")
 
 # TODO: use with flag --local
 LOCAL_PATH = os.getenv("DB_BACKUP_LOCAL_PATH")
-
 TMP_BACKUP_DIR: Path = Path(tempfile.mkdtemp())
 
 

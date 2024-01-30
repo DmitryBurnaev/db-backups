@@ -24,7 +24,6 @@ if typing.TYPE_CHECKING:
 logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
 logger_ctx: ContextVar["LoggerContext"] = ContextVar("logger_ctx")
-load_dotenv(find_dotenv())
 
 if settings.SENTRY_DSN:
     sentry_sdk.init(settings.SENTRY_DSN)

@@ -94,7 +94,6 @@ def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
         prefix = date.strftime("%Y-%m-%d")
         list_objects = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, prefix=prefix)
         objects = sorted(list_objects["Contents"], key=itemgetter("Key"), reverse=True)
-        print(objects)
         if not objects:
             raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
 
@@ -201,7 +200,7 @@ def check_env_variables(*env_variables, raise_exception: bool = True) -> list[st
     missed_variables = []
     for variable in env_variables:
         settings_var = variable.removesuffix("DB_BACKUP_")
-        if not any((os.getenv(variable), getattr(settings, settings_var))):
+        if not any((os.getenv(variable), getattr(settings, settings_var, None))):
             missed_variables.append(variable)
 
     if missed_variables:
@@ -317,7 +316,7 @@ class LoggerContext:
 
 def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str] | None = None) -> T:
     required_vars = required_vars or ENV_VARS_REQUIRES.get(value)
-    if value and (missed_vars := check_env_variables(required_vars, raise_exception=False)):
+    if value and (missed_vars := check_env_variables(*required_vars, raise_exception=False)):
         raise click.UsageError(
             f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"
         )
