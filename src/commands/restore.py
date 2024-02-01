@@ -24,7 +24,7 @@ BACKUP_SOURCE = ("S3", "LOCAL")
 @click.option(
     "-H",
     "--handler",
-    metavar="RESTORE_HANDLER",
+    # metavar="RESTORE_HANDLER",
     required=True,
     show_choices=HANDLERS.keys(),
     type=click.Choice(list(HANDLERS.keys())),
@@ -44,7 +44,10 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     metavar="BACKUP_DATE",
     default=datetime.date.today().strftime(DATE_FORMAT),
     type=click.DateTime(formats=[DATE_FORMAT]),
-    help=f"Specific date (in ISO format: {DATE_FORMAT}) for restoring backup (today by default)",
+    help=(
+        f"Specific date (in ISO format: {DATE_FORMAT}) for restoring backup "
+        f"(default: {datetime.date.today().strftime(DATE_FORMAT)})"
+    ),
 )
 @click.option(
     "-dc",
@@ -97,6 +100,7 @@ def cli(
                 date=date,
                 directory=settings.LOCAL_PATH,
             )
+
         case "S3":
             backup_full_path = utils.download_from_s3_by_date(db_name=db, date=date)
 
