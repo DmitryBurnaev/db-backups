@@ -191,7 +191,7 @@ class DockerPGHandler(BaseHandler):
         }
         drop_old_db_command = (
             "PGPASSWORD=\"{password}\" psql -h {host} -p {port} -U {user}"
-            "-c \"drop database {self.db_name}\""
+            "-c \"drop database {db_name}\""
         )
         call_with_logging(drop_old_db_command.format(**command_kwargs))
 

@@ -254,7 +254,7 @@ def find_local_file_by_date(db_name: str, date: datetime.date, directory: Path) 
 
     dir_files = sorted(filter(validate_backup_file_name, os.listdir(directory)), reverse=True)
     if not dir_files:
-        raise RestoreBackupError(f"No backup files found for date {date}")
+        raise RestoreBackupError(f"No backup files found for date {date} in {directory}")
 
     result_path = Path(directory) / dir_files[0]
     logger.debug("[%s] Last backup found: %s", db_name, result_path)
