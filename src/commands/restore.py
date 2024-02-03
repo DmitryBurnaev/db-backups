@@ -59,12 +59,6 @@ BACKUP_SOURCE = ("S3", "LOCAL")
         Required for using docker_* handler
     """,
 )
-@click.option(
-    "--decrypt",
-    is_flag=True,
-    help="Turn ON backup's decryption (with openssl)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["ENCRYPT"]),
-)
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
@@ -73,7 +67,6 @@ def cli(
     source: str,
     date: datetime.date,
     docker_container: str | None,
-    decrypt: bool,
     verbose: bool,
     no_colors: bool,
 ):
@@ -109,7 +102,7 @@ def cli(
             exit(1)
 
     try:
-        if decrypt:
+        if str(backup_full_path).endswith(".enc"):
             backup_full_path = utils.decrypt_file(db_name=db, file_path=backup_full_path)
 
         restore_handler.restore(backup_full_path)

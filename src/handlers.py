@@ -127,8 +127,9 @@ class PGHandler(BaseHandler):
         "PG_PASSWORD",
     )
 
-    def _do_backup(self) -> str:
-        command_kwargs = {
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.command_kwargs = {
             "pg_dump_bin": settings.PG_DUMP_BIN,
             "host": settings.PG_HOST,
             "port": settings.PG_PORT,
@@ -137,13 +138,56 @@ class PGHandler(BaseHandler):
             "db_name": self.db_name,
             "backup_path": self.backup_path,
         }
+
+    def _do_backup(self) -> str:
         backup_command = """
             PGPASSWORD="{password}" {pg_dump_bin} -h {host} -p {port} -U {user} -d {db_name} -f {backup_path}    
         """
-        return call_with_logging(command=backup_command.format(**command_kwargs))
+        return call_with_logging(command=backup_command.format(**self.command_kwargs))
 
     def _do_restore(self, file_path: Path) -> None:
-        pass
+        if self._check_db_exists():
+            msg = (
+                f"There is an existing DB on your postgres server. "
+                f"Do you want to remove already created DB {self.db_name}?"
+            )
+            if click.confirm(msg):
+                self._remove_db()
+            else:
+                raise RestoreBackupError("Couldn't restore logic continue during DB exists")
+
+        command_kwargs = {
+            "host": settings.PG_HOST,
+            "port": settings.PG_PORT,
+            "user": settings.PG_USER,
+            "password": settings.PG_PASSWORD,
+            "db_name": self.db_name,
+            "backup_path": self.backup_path,
+        }
+        drop_old_db_command = (
+            "PGPASSWORD=\"{password}\" psql -h {host} -p {port} -U {user}"
+            "-c \"drop database {db_name}\""
+        )
+        call_with_logging(drop_old_db_command.format(**command_kwargs))
+
+    def _check_db_exists(self):
+        self.logger.debug(f"[%s] check DB exists...", self.db_name)
+        command = """
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -l | grep {db_name} | wc -l   
+        """
+        result = call_with_logging(command.format(**self.command_kwargs)).strip()
+        exists = result != "0"
+        if exists:
+            self.logger.debug("%s Detected existing DB", self.db_name)
+
+        return exists
+
+    def _remove_db(self):
+        self.logger.info(f"[%s] Removing existing DB...", self.db_name)
+        command = """
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} drop database {db_name}  
+        """
+        call_with_logging(command.format(**self.command_kwargs))
 
 
 class DockerPGHandler(BaseHandler):
@@ -176,35 +220,10 @@ class DockerPGHandler(BaseHandler):
         return stdout
 
     def _do_restore(self, file_path: Path) -> None:
-        if self._check_db_exists():
-            if click.confirm(f"Do you want to remove already created DB {self.db_name}?"):
-                self.logger.info(f"[%s] Removing existing DB...", self.db_name)
-                self._remove_db()
-
-        command_kwargs = {
-            "host": settings.PG_HOST,
-            "port": settings.PG_PORT,
-            "user": settings.PG_USER,
-            "password": settings.PG_PASSWORD,
-            "db_name": self.db_name,
-            "backup_path": self.backup_path,
-        }
-        drop_old_db_command = (
-            "PGPASSWORD=\"{password}\" psql -h {host} -p {port} -U {user}"
-            "-c \"drop database {db_name}\""
-        )
-        call_with_logging(drop_old_db_command.format(**command_kwargs))
+        raise NotImplementedError()
 
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'
-
-    def _check_db_exists(self):
-        self.logger.debug(f"[%s] check DB exists...", self.db_name)
-        # TODO: implement cheking logic
-
-    def _remove_db(self):
-        self.logger.debug(f"[%s] removing exists DB ...", self.db_name)
-        # TODO: implement remove logic
 
 
 HANDLERS: dict[str, Type[BaseHandler]] = {

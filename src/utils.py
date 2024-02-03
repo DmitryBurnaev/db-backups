@@ -120,7 +120,7 @@ def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
     return result_path
 
 
-def call_with_logging(command: str):
+def call_with_logging(command: str) -> str:
     """
     Call command, detect error and logging
 
