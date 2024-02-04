@@ -19,8 +19,8 @@ module_logger = logging.getLogger("backup")
     type=str,
 )
 @click.option(
-    "-H",
-    "--handler",
+    "--from",
+    "handler",
     metavar="BACKUP_HANDLER",
     required=True,
     show_choices=HANDLERS.keys(),
@@ -29,8 +29,8 @@ module_logger = logging.getLogger("backup")
 )
 @click.option(
     "-C",
-    "--docker-container",
-    metavar="CONTAINER_NAME",
+    "--container",
+    metavar="DOCKER_CONTAINER",
     type=str,
     help="""
         Name of docker container which should be used for getting dump.
@@ -38,61 +38,43 @@ module_logger = logging.getLogger("backup")
     """,
 )
 @click.option(
-    "-E",
-    "--encrypt",
-    is_flag=True,
-    help="Turn ON backup's encryption (with openssl)",
-)
-@click.option(
-    "-D",
-    "--destination",
+    "--to",
+    "destination",
+    metavar="DESTINATION",
     required=True,
     type=click.STRING,
     help=(
-        f"Comma separated list of dst places (result backup file will be moved to). "
+        f"Comma separated list of destination places (result backup file will be moved to). "
         f"Possible values: {BACKUP_LOCATIONS}"
     ),
     callback=split_option_values,
 )
-# @click.option(
-#     "-s3",
-#     "--copy-s3",
-#     is_flag=True,
-#     help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-#     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["S3"]),
-# )
-# @click.option(
-#     "-l",
-#     "--copy-local",
-#     is_flag=True,
-#     help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-#     callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["LOCAL"]),
-# )
+@click.option(
+    "--encrypt",
+    is_flag=True,
+    help="Turn ON backup's encryption (with openssl)",
+)
 @click.option("-V", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    # **kwargs,
     db: str,
     handler: str,
-    docker_container: str | None,
+    container: str | None,
     encrypt: bool,
     destination: tuple[str, ...],
-    # copy_s3: bool,
-    # copy_local: bool,
     verbose: bool,
     no_colors: bool,
 ):
-    # print(kwargs)
     """Shows file changes in the current working directory."""
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
-    if "docker" in handler and not docker_container:
+    if "docker" in handler and not container:
         logger.critical("Using handler '%s' requires '--docker-container' argument", handler)
         exit(1)
 
     try:
-        backup_handler: BaseHandler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+        backup_handler: BaseHandler = HANDLERS[handler](db, container_name=container, logger=logger)
     except KeyError:
         logger.critical("Unknown handler '%s'", handler)
         exit(1)

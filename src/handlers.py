@@ -191,7 +191,7 @@ class PGHandler(BaseHandler):
 
 
 class DockerPGHandler(BaseHandler):
-    service = "docker-postgres"
+    service = "postgres-docker"
     required_variables = ()
 
     def __init__(self, db_name: str, **extra_kwargs):
@@ -229,5 +229,5 @@ class DockerPGHandler(BaseHandler):
 HANDLERS: dict[str, Type[BaseHandler]] = {
     "mysql": MySQLHandler,
     "postgres": PGHandler,
-    "docker-postgres": DockerPGHandler,
+    "postgres-container": DockerPGHandler,
 }

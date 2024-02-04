@@ -189,9 +189,9 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
         f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {decrypted_file_path}"
     )
-    replace_command = f"rm {file_path} && mv {decrypted_file_path} {file_path}"
+    # replace_command = f"rm {file_path} && mv {decrypted_file_path} {file_path}"
     call_with_logging(decrypt_command)
-    call_with_logging(replace_command)
+    # call_with_logging(replace_command)
     logger.info("[%s] decryption: backup file decrypted %s", db_name, decrypted_file_path)
     return file_path
 

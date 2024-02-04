@@ -17,27 +17,38 @@ BACKUP_SOURCE = ("S3", "LOCAL")
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
 @click.argument(
-    "db",
+    "DB",
     metavar="DB_NAME",
     type=str,
 )
 @click.option(
-    "-H",
-    "--handler",
-    # metavar="RESTORE_HANDLER",
-    required=True,
-    show_choices=HANDLERS.keys(),
-    type=click.Choice(list(HANDLERS.keys())),
-    help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
-)
-@click.option(
-    "--source",
+    "--from",
+    "source",
     metavar="BACKUP_SOURCE",
     required=True,
     show_choices=BACKUP_SOURCE,
     callback=validate_envar_option,
     type=click.Choice(list(BACKUP_SOURCE)),
     help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_SOURCE}",
+)
+@click.option(
+    "--to",
+    "handler",
+    metavar="RESTORE_HANDLER",
+    required=True,
+    show_choices=HANDLERS.keys(),
+    type=click.Choice(list(HANDLERS.keys())),
+    help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
+)
+@click.option(
+    "-C",
+    "--docker-container",
+    metavar="CONTAINER_NAME",
+    type=str,
+    help="""
+        Name of docker container which should be used for getting dump.
+        Required for using docker_* handler
+    """,
 )
 @click.option(
     "--date",
@@ -49,24 +60,14 @@ BACKUP_SOURCE = ("S3", "LOCAL")
         f"(default: {datetime.date.today().strftime(DATE_FORMAT)})"
     ),
 )
-@click.option(
-    "-dc",
-    "--docker-container",
-    metavar="CONTAINER_NAME",
-    type=str,
-    help="""
-        Name of docker container which should be used for getting dump.
-        Required for using docker_* handler
-    """,
-)
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
     db: str,
-    handler: str,
     source: str,
-    date: datetime.date,
+    handler: str,
     docker_container: str | None,
+    date: datetime.date,
     verbose: bool,
     no_colors: bool,
 ):
