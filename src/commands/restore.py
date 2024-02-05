@@ -41,7 +41,7 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
 )
 @click.option(
-    "-C",
+    "-c",
     "--docker-container",
     metavar="CONTAINER_NAME",
     type=str,

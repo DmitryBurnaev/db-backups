@@ -28,7 +28,7 @@ module_logger = logging.getLogger("backup")
     help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
 )
 @click.option(
-    "-C",
+    "-c",
     "--container",
     metavar="DOCKER_CONTAINER",
     type=str,
@@ -50,6 +50,7 @@ module_logger = logging.getLogger("backup")
     callback=split_option_values,
 )
 @click.option(
+    "-e",
     "--encrypt",
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
