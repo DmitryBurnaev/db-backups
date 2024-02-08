@@ -227,7 +227,7 @@ class DockerPGHandler(BaseHandler):
 
 
 HANDLERS: dict[str, Type[BaseHandler]] = {
-    "mysql": MySQLHandler,
-    "postgres": PGHandler,
-    "postgres-container": DockerPGHandler,
+    "MYSQL": MySQLHandler,
+    "POSTGRES": PGHandler,
+    "POSTGRES-CONTAINER": DockerPGHandler,
 }

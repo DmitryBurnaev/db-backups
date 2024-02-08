@@ -32,15 +32,6 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_SOURCE}",
 )
 @click.option(
-    "--to",
-    "handler",
-    metavar="RESTORE_HANDLER",
-    required=True,
-    show_choices=HANDLERS.keys(),
-    type=click.Choice(list(HANDLERS.keys())),
-    help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
-)
-@click.option(
     "-c",
     "--docker-container",
     metavar="CONTAINER_NAME",
@@ -49,6 +40,15 @@ BACKUP_SOURCE = ("S3", "LOCAL")
         Name of docker container which should be used for getting dump.
         Required for using docker_* handler
     """,
+)
+@click.option(
+    "--to",
+    "handler",
+    metavar="RESTORE_HANDLER",
+    required=True,
+    show_choices=HANDLERS.keys(),
+    type=click.Choice(list(HANDLERS.keys())),
+    help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
 )
 @click.option(
     "--date",
@@ -71,7 +71,9 @@ def cli(
     verbose: bool,
     no_colors: bool,
 ):
-    """Shows file changes in the current working directory."""
+    """
+    Prepares provided file (placed on S3 or local storage) and restore it to specified DB
+    """
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 

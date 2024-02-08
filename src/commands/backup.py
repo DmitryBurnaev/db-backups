@@ -55,7 +55,7 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
-@click.option("-V", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
+@click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
     db: str,
@@ -66,7 +66,11 @@ def cli(
     verbose: bool,
     no_colors: bool,
 ):
-    """Shows file changes in the current working directory."""
+    """
+    Backups DB from specific container (or service)
+    and uploads it to S3 and/or to the local storage.
+    """
+
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
