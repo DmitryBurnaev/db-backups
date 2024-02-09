@@ -115,7 +115,7 @@ class MySQLHandler(BaseHandler):
         return call_with_logging(command=f"echo '{self.db_name} should be restored....'")
 
 
-class PGHandler(BaseHandler):
+class PGServiceHandler(BaseHandler):
     """Backup PG database from postgres server (via pg_dump)"""
 
     service = "postgres"
@@ -190,7 +190,7 @@ class PGHandler(BaseHandler):
         call_with_logging(command.format(**self.command_kwargs))
 
 
-class DockerPGHandler(BaseHandler):
+class PGDockerHandler(BaseHandler):
     service = "postgres-docker"
     required_variables = ()
 
@@ -228,6 +228,6 @@ class DockerPGHandler(BaseHandler):
 
 HANDLERS: dict[str, Type[BaseHandler]] = {
     "MYSQL": MySQLHandler,
-    "POSTGRES": PGHandler,
-    "POSTGRES-CONTAINER": DockerPGHandler,
+    "PG-SERVICE": PGServiceHandler,
+    "PG-CONTAINER": PGDockerHandler,
 }
