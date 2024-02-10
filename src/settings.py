@@ -34,10 +34,8 @@ S3_SECRET_ACCESS_KEY = os.getenv("DB_BACKUP_S3_SECRET_ACCESS_KEY")
 S3_BUCKET_NAME = os.getenv("DB_BACKUP_S3_BUCKET_NAME")
 S3_DST_PATH = os.getenv("DB_BACKUP_S3_PATH")
 
-# TODO: use with flag --local
 LOCAL_PATH = os.getenv("DB_BACKUP_LOCAL_PATH")
 TMP_BACKUP_DIR: Path = Path(tempfile.mkdtemp())
-
 
 LOGGING = {
     "version": 1,

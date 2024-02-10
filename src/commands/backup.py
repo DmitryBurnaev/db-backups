@@ -94,7 +94,7 @@ def cli(
             utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
 
         if "S3" in destination:
-            utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
+            utils.s3_upload(db_name=db, backup_path=backup_full_path)
 
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)

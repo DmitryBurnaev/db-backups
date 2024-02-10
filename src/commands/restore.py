@@ -91,14 +91,14 @@ def cli(
 
     match source:
         case "LOCAL":
-            backup_full_path = utils.find_local_file_by_date(
+            backup_full_path = utils.local_file_search_by_date(
                 db_name=db,
                 date=date,
                 directory=settings.LOCAL_PATH,
             )
 
         case "S3":
-            backup_full_path = utils.download_from_s3_by_date(db_name=db, date=date)
+            backup_full_path = utils.s3_download(db_name=db, date=date)
 
         case _:
             logger.critical("Unknown source '%s'", source)

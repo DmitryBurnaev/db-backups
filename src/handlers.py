@@ -26,9 +26,10 @@ class BaseHandler(ABC):
     def __init__(self, db_name: str, **extra_kwargs):
         self.db_name = db_name
         self.logger = logger_ctx.get(module_logger)
-        self.backup_filename = get_filename(self.db_name)
-        self.backup_path = settings.TMP_BACKUP_DIR / f"{self.db_name}.backup.sql"
-        self.compressed_backup_path = settings.TMP_BACKUP_DIR / f"{self.backup_filename}.tar.gz"
+        self.backup_file_prefix = get_filename(self.db_name)
+        self.backup_file_name = f"{self.backup_file_prefix}.backup.sql"
+        self.backup_path = settings.TMP_BACKUP_DIR / self.backup_file_name
+        self.compressed_backup_path = settings.TMP_BACKUP_DIR / f"{self.backup_file_prefix}.tar.gz"
         self.extra_kwargs = extra_kwargs
 
     def backup(self) -> Path:
@@ -41,7 +42,7 @@ class BaseHandler(ABC):
                 f"\n === \nbackup_stdout: \n{backup_stdout}"
             )
 
-        archive_stdout = self._do_archive()
+        archive_stdout = self._do_zip()
         if not self.compressed_backup_path.exists():
             raise BackupError(
                 f"Backup wasn't archived (result file not found). "
@@ -60,10 +61,10 @@ class BaseHandler(ABC):
     def restore(self, file_path: Path) -> None:
         self.logger.info(f"[%s] handle restore via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
-        self.backup_path = file_path
-        if not self.backup_path.exists():
+        if not file_path.exists():
             raise RestoreBackupError(f"Backup doesn't exist {self.backup_path}")
 
+        self.backup_path = self._do_unzip(file_path)
         self._do_restore(file_path)
         self._do_clean()
 
@@ -75,12 +76,21 @@ class BaseHandler(ABC):
     def _do_restore(self, file_path: Path) -> None:
         ...
 
-    def _do_archive(self) -> str:
+    def _do_zip(self) -> str:
         parent_dir, file_name = self.backup_path.parent, self.backup_path.name
         command = f"""
             cd {parent_dir} && tar -cvzf {self.compressed_backup_path} {file_name}
         """
         return call_with_logging(command)
+
+    def _do_unzip(self, compressed_backup_path: Path) -> Path:
+        parent_dir, file_name = compressed_backup_path.parent, compressed_backup_path.name
+        call_with_logging(f"tar -zxvf {compressed_backup_path}")
+        result_file = parent_dir / self.backup_file_name
+        if not result_file.is_file():
+            raise RestoreBackupError(f"Backup archive doesn't contain {self.backup_file_name}")
+
+        return result_file
 
     def _do_clean(self) -> str:
         return call_with_logging(command=f"rm {self.backup_path}")
@@ -112,7 +122,7 @@ class MySQLHandler(BaseHandler):
         return call_with_logging(command=backup_command.format(**command_kwargs))
 
     def _do_restore(self, file_path: Path) -> None:
-        return call_with_logging(command=f"echo '{self.db_name} should be restored....'")
+        raise NotImplementedError("Not implemented yet")
 
 
 class PGServiceHandler(BaseHandler):
@@ -141,7 +151,7 @@ class PGServiceHandler(BaseHandler):
 
     def _do_backup(self) -> str:
         backup_command = """
-            PGPASSWORD="{password}" {pg_dump_bin} -h {host} -p {port} -U {user} -d {db_name} -f {backup_path}    
+            PGPASSWORD="{password}" {pg_dump_bin} -h{host} -p{port} -U{user} -d {db_name} -f {backup_path}    
         """
         return call_with_logging(command=backup_command.format(**self.command_kwargs))
 
@@ -152,23 +162,14 @@ class PGServiceHandler(BaseHandler):
                 f"Do you want to remove already created DB {self.db_name}?"
             )
             if click.confirm(msg):
-                self._remove_db()
+                self._drop_db()
             else:
                 raise RestoreBackupError("Couldn't restore logic continue during DB exists")
 
-        command_kwargs = {
-            "host": settings.PG_HOST,
-            "port": settings.PG_PORT,
-            "user": settings.PG_USER,
-            "password": settings.PG_PASSWORD,
-            "db_name": self.db_name,
-            "backup_path": self.backup_path,
-        }
-        drop_old_db_command = (
-            "PGPASSWORD=\"{password}\" psql -h {host} -p {port} -U {user}"
-            "-c \"drop database {db_name}\""
-        )
-        call_with_logging(drop_old_db_command.format(**command_kwargs))
+        restore_command = """
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}
+        """
+        call_with_logging(restore_command.format(**self.command_kwargs))
 
     def _check_db_exists(self):
         self.logger.debug(f"[%s] check DB exists...", self.db_name)
@@ -182,10 +183,10 @@ class PGServiceHandler(BaseHandler):
 
         return exists
 
-    def _remove_db(self):
+    def _drop_db(self):
         self.logger.info(f"[%s] Removing existing DB...", self.db_name)
         command = """
-            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} drop database {db_name}  
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -c "drop database {db_name}"  
         """
         call_with_logging(command.format(**self.command_kwargs))
 
@@ -202,7 +203,7 @@ class PGDockerHandler(BaseHandler):
 
     def _do_backup(self) -> str:
         """Allows to backup postgres db from docker-based postgres server"""
-        backup_in_container_path = f"/tmp/{self.backup_filename}.sql"
+        backup_in_container_path = f"/tmp/{self.backup_file_name}"
 
         # 1. do backup inside a docker container
         backup_command = self._wrap_do_in_docker(

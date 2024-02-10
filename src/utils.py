@@ -1,6 +1,7 @@
 import dataclasses
 import os
 import logging
+import shutil
 import subprocess
 import sys
 from datetime import datetime
@@ -15,7 +16,7 @@ import click
 from src import settings
 from src.constants import ENV_VARS_REQUIRES
 from src.run import logger_ctx
-from src.settings import DATE_FORMAT
+from src.settings import DATE_FORMAT, TMP_BACKUP_DIR
 
 module_logger = logging.getLogger(__name__)
 ENCRYPT_PASS = "env:DB_BACKUP_ENCRYPT_PASS"
@@ -41,7 +42,7 @@ class RestoreBackupError(BackupError):
     """Custom exception for restoring logic"""
 
 
-def upload_to_s3(db_name: str, backup_path: Path) -> None:
+def s3_upload(db_name: str, backup_path: Path) -> None:
     """Allows to upload src_filename to S3 storage"""
     logger = logger_ctx.get(module_logger)
     check_env_variables(
@@ -74,8 +75,8 @@ def upload_to_s3(db_name: str, backup_path: Path) -> None:
     logger.info("[%s] backup uploaded to s3: %s", db_name, result_url)
 
 
-def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
-    """Allows to fetch last backup from provided S3 bucket"""
+def s3_download(db_name: str, date: datetime.date) -> Path:
+    """Allows to fetch and download backup-file (by provided date) from S3 bucket"""
     logger = logger_ctx.get(module_logger)
     check_env_variables(
         "S3_STORAGE_URL",
@@ -105,7 +106,7 @@ def download_from_s3_by_date(db_name: str, date: datetime.date) -> Path:
             file_name,
             result_path,
         )
-        # TODO: implement downloading logic
+        # TODO: recheck downloading logic
         s3.download_file(
             Bucket=settings.S3_BUCKET_NAME,
             Object=settings.S3_DST_PATH / file_name,
@@ -170,6 +171,7 @@ def encrypt_file(db_name: str, file_path: Path) -> Path:
     logger = logger_ctx.get(module_logger)
     encrypted_file_path = file_path.with_suffix(f"{file_path.suffix}.enc")
 
+    logger.debug("[%s] encrypting file %s ...", db_name, encrypted_file_path)
     encrypt_command = (
         f"openssl enc -aes-256-cbc -e -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {encrypted_file_path}"
@@ -185,6 +187,7 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
     """Decrypts file by provided path (with openssl)"""
     logger = logger_ctx.get(module_logger)
     decrypted_file_path = Path(str(file_path).removesuffix(".enc"))
+    logger.debug("[%s] decrypting file %s ...", db_name, encrypted_file_path)
     decrypt_command = (
         f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {decrypted_file_path}"
@@ -238,7 +241,7 @@ def remove_file(file_path: Path):
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
 
 
-def find_local_file_by_date(db_name: str, date: datetime.date, directory: Path) -> Path:
+def local_file_search_by_date(db_name: str, date: datetime.date, directory: Path) -> Path:
     """
     Finds the last backup file in the given directory
     """
@@ -256,8 +259,9 @@ def find_local_file_by_date(db_name: str, date: datetime.date, directory: Path) 
     if not dir_files:
         raise RestoreBackupError(f"No backup files found for date {date} in {directory}")
 
-    result_path = Path(directory) / dir_files[0]
-    logger.debug("[%s] Last backup found: %s", db_name, result_path)
+    found_file_path = Path(directory) / dir_files[0]
+    result_path = shutil.copy(found_file_path, TMP_BACKUP_DIR)
+    logger.debug("[%s] Last backup found and copied to: %s", db_name, result_path)
     return result_path
 
 
