@@ -187,16 +187,14 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
     """Decrypts file by provided path (with openssl)"""
     logger = logger_ctx.get(module_logger)
     decrypted_file_path = Path(str(file_path).removesuffix(".enc"))
-    logger.debug("[%s] decrypting file %s ...", db_name, encrypted_file_path)
+    logger.debug("[%s] decrypting file %s ...", db_name, decrypted_file_path)
     decrypt_command = (
         f"openssl enc -aes-256-cbc -d -pbkdf2 -pass {ENCRYPT_PASS} -in {file_path} "
         f"> {decrypted_file_path}"
     )
-    # replace_command = f"rm {file_path} && mv {decrypted_file_path} {file_path}"
     call_with_logging(decrypt_command)
-    # call_with_logging(replace_command)
     logger.info("[%s] decryption: backup file decrypted %s", db_name, decrypted_file_path)
-    return file_path
+    return decrypted_file_path
 
 
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
@@ -260,7 +258,7 @@ def local_file_search_by_date(db_name: str, date: datetime.date, directory: Path
         raise RestoreBackupError(f"No backup files found for date {date} in {directory}")
 
     found_file_path = Path(directory) / dir_files[0]
-    result_path = shutil.copy(found_file_path, TMP_BACKUP_DIR)
+    result_path = Path(shutil.copy(found_file_path, TMP_BACKUP_DIR))
     logger.debug("[%s] Last backup found and copied to: %s", db_name, result_path)
     return result_path
 

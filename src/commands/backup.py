@@ -5,9 +5,9 @@ import click
 
 from src import utils, settings
 from src.handlers import HANDLERS, BaseHandler
-from src.constants import ENV_VARS_REQUIRES, BACKUP_LOCATIONS
+from src.constants import BACKUP_LOCATIONS
 from src.run import logger_ctx
-from src.utils import LoggerContext, validate_envar_option, split_option_values
+from src.utils import LoggerContext, split_option_values
 
 module_logger = logging.getLogger("backup")
 
@@ -32,10 +32,7 @@ module_logger = logging.getLogger("backup")
     "--container",
     metavar="DOCKER_CONTAINER",
     type=str,
-    help="""
-        Name of docker container which should be used for getting dump.
-        Required for using docker_* handler
-    """,
+    help="Name of docker container which should be used for getting dump.",
 )
 @click.option(
     "--to",

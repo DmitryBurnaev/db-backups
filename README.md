@@ -10,26 +10,39 @@ sudo pip install poetry
 ```
 
 ```shell script
-git clone [repository_url] <path_to_project>
-cd <path_to_project>
+export DB_BACKUP_TOOL_PATH="/opt/db-backups"
+
+git clone [repository_url] "${DB_BACKUP_TOOL_PATH}"
+cd "${DB_BACKUP_TOOL_PATH}"
 poetry install
 
 cp .env.template .env
-nano .env # modify needed variables
+nano .env # modify required variables
 ```
 
 ### Usage
 
-### Run manually 
-To get started right away (from docker container and upload to YandexDisc):
+### Run manually (backup)
+To get started right away (from docker container, encrypt and upload to S3):
 ```shell script
-cd <path_to_project>
-poetry run backup <DB_NAME> --handler docker_postgres --container postgres --s3
+cd "${DB_BACKUP_TOOL_PATH}"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL --encrypt
+```
+### Run manually (restore)
+To run backup (from file in local directory, decrypt and apply to postgres (as a service)):
+```shell script
+cd "${DB_BACKUP_TOOL_PATH}"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE -c ${CONTAINER_NAME}
 ```
 
-### Run postgres backup via docker (local backup only)
+### Run backup via docker (local backup only)
 To store backup on host's directory
 ```shell script
+# TODO: fix commands
 docker-compose up --build
 docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
 ```
@@ -51,29 +64,46 @@ docker-compose run backup python -m src.run backup <DB_NAME> -h postgres -s3 --e
 
 ### Command line options (backup)
 ```text
-Usage: python -m src.run backup [OPTIONS] DB_NAME
+Usage: backup [OPTIONS] DB_NAME
 
-  Shows file changes in the current working directory.
+  Backups DB from specific container (or service) and uploads it to S3 and/or
+  to the local storage.
 
 Options:
-  -h, --handler BACKUP_HANDLER    Handler, that will be used for backup
-                                  ('mysql', 'postgres', 'docker-postgres')
+  --from BACKUP_HANDLER           Handler, that will be used for backup
+                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
                                   [required]
-  -dc, --docker-container CONTAINER_NAME
+  -c, --container DOCKER_CONTAINER
                                   Name of docker container which should be
-                                  used for getting dump. Required for using
-                                  docker_* handler
+                                  used for getting dump.
+  --to DESTINATION                Comma separated list of destination places
+                                  (result backup file will be moved to).
+                                  Possible values: ('S3', 'LOCAL')  [required]
   -e, --encrypt                   Turn ON backup's encryption (with openssl)
-  --encrypt-pass DB_BACKUP_ENCRYPT_PASS
-                                  Openssl config to provide source of
-                                  encryption pass: ('env:var_name',
-                                  'file:path_name', 'fd:number') | see details
-                                  in README.md  [default:
-                                  env:DB_BACKUP_ENCRYPT_PASS]
-  -s3, --copy-s3                  Send backup to S3-like storage (requires
-                                  DB_BACKUP_S3_* env vars)
-  -l, --copy-local                Store backup locally (requires
-                                  DB_BACKUP_LOCAL_PATH env)
+  -v, --verbose                   Enables verbose mode.
+  --no-colors                     Disables colorized output.
+  --help                          Show this message and exit.
+```
+
+### Command line options (restore)
+```text
+Usage: restore [OPTIONS] DB_NAME
+
+  Prepares provided file (placed on S3 or local storage) and restore it to
+  specified DB
+
+Options:
+  --from BACKUP_SOURCE            Source of backup file, that will be used for
+                                  downloading/copying: ('S3', 'LOCAL')
+                                  [required]
+  --to RESTORE_HANDLER            Handler, that will be used for restore:
+                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
+                                  [required]
+  -c, --docker-container CONTAINER_NAME
+                                  Name of docker container which should be
+                                  used for getting dump.
+  --date BACKUP_DATE              Specific date (in ISO format: %Y-%m-%d) for
+                                  restoring backup (default: 2024-02-11)
   -v, --verbose                   Enables verbose mode.
   --no-colors                     Disables colorized output.
   --help                          Show this message and exit.

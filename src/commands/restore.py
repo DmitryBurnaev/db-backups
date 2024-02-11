@@ -32,16 +32,6 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_SOURCE}",
 )
 @click.option(
-    "-c",
-    "--docker-container",
-    metavar="CONTAINER_NAME",
-    type=str,
-    help="""
-        Name of docker container which should be used for getting dump.
-        Required for using docker_* handler
-    """,
-)
-@click.option(
     "--to",
     "handler",
     metavar="RESTORE_HANDLER",
@@ -49,6 +39,13 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     show_choices=HANDLERS.keys(),
     type=click.Choice(list(HANDLERS.keys())),
     help=f"Handler, that will be used for restore: {tuple(HANDLERS.keys())}",
+)
+@click.option(
+    "-c",
+    "--docker-container",
+    metavar="CONTAINER_NAME",
+    type=str,
+    help="Name of docker container which should be used for getting dump.",
 )
 @click.option(
     "--date",
