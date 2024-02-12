@@ -61,7 +61,7 @@ class BaseHandler(ABC):
         self.logger.info(f"[%s] handle restore via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         if not file_path.exists():
-            raise RestoreBackupError(f"Backup doesn't exist {self.backup_path}")
+            raise RestoreBackupError(f"Backup doesn't exist {file_path}")
 
         self.backup_path = self._do_unzip(file_path)
         self._do_restore(file_path)
@@ -174,9 +174,8 @@ class PGServiceHandler(BaseHandler):
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -l | grep {db_name}   
         """
         result = call_with_logging(command.format(**self.command_kwargs)).strip()
-        exists = result != "0"
-        if exists:
-            self.logger.debug("%s Detected existing DB", self.db_name)
+        if exists := result != "":
+            self.logger.debug("[%s] Detected existing DB", self.db_name)
 
         return exists
 
@@ -226,7 +225,7 @@ class PGDockerHandler(BaseHandler):
 
         # 2. copy result file from a docker container to the host machine
         stdout += call_with_logging(
-            command=f"docker cp {self.container_name}:{backup_in_container_path} {self.backup_path}"
+            f"docker cp {self.container_name}:{backup_in_container_path} {self.backup_path}"
         )
 
         # 3. remove tmp file in a docker container
@@ -234,7 +233,49 @@ class PGDockerHandler(BaseHandler):
         return stdout
 
     def _do_restore(self, file_path: Path) -> None:
-        raise NotImplementedError()
+        if self._check_db_exists():
+            msg = (
+                f"There is an existing DB on your postgres server. "
+                f"Do you want to remove already created DB {self.db_name}?"
+            )
+            if click.confirm(msg):
+                self._drop_db()
+            else:
+                raise RestoreBackupError("Couldn't restore logic continue during DB exists")
+
+        self._create_db()
+        self._restore_db()
+
+    def _check_db_exists(self):
+        self.logger.debug(f"[%s] check DB exists...", self.db_name)
+        command = self._wrap_do_in_docker(f"psql  -l | grep {self.db_name}")
+        result = call_with_logging(command).strip()
+        if exists := result != "0":
+            self.logger.debug("[%s] Detected existing DB", self.db_name)
+
+        return exists
+
+    def _drop_db(self):
+        self.logger.info(f"[%s] Removing existing DB...", self.db_name)
+        command = self._wrap_psql_in_docker(f"DROP DATABASE IF EXISTS {self.db_name}")
+        call_with_logging(command)
+
+    def _create_db(self):
+        self.logger.info(f"[%s] Creating new DB...", self.db_name)
+        command = self._wrap_psql_in_docker(f"CREATE DATABASE {self.db_name}")
+        call_with_logging(command)
+
+    def _restore_db(self):
+        self.logger.info(f"[%s] Restoring DB...", self.db_name)
+        backup_path_in_container = f"/tmp/{self.backup_path.name}"
+        call_with_logging(
+            f"docker cp {self.backup_path} {self.container_name}:{backup_path_in_container}"
+        )
+        command = self._wrap_do_in_docker(f"psql {self.db_name} < {backup_path_in_container}")
+        call_with_logging(command)
+
+    def _wrap_psql_in_docker(self, command) -> str:
+        return self._wrap_do_in_docker(f"psql -c \"{command}\"")
 
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'
