@@ -1,6 +1,7 @@
 import dataclasses
 import os
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -121,19 +122,29 @@ def s3_download(db_name: str, date: datetime.date) -> Path:
     return result_path
 
 
-def call_with_logging(command: str) -> str:
+def call_with_logging(command: str, password_prefix: str | None = None) -> str:
     """
     Call command, detect error and logging
 
     :param command: command that need to be called
+    :param password_prefix: specified prefix for password replacing (ex.: PG_PASSWORD)
     :return: True - not found errors. False - errors founded
     :raise `BackupError`
 
     """
-    command = command.strip()
+
+    def replace_pwd(command_string) -> str:
+        if password_prefix:
+            password_mask = "*****"
+            pattern = r'({}=")(.*?)(")'.format(password_prefix)
+            if re.search(pattern, command_string):
+                return re.sub(pattern, r'\1{}\3'.format(password_mask), command_string)
+
+        return command_string
+
+    command = replace_pwd(command.strip())
     logger = logger_ctx.get(module_logger)
 
-    # TODO: replace passwords with '***'
     logger.debug(f"Call command [{command}] ... ")
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
