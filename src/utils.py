@@ -111,7 +111,7 @@ def s3_download(db_name: str, date: datetime.date) -> Path:
         s3.download_file(
             Bucket=settings.S3_BUCKET_NAME,
             Object=settings.S3_DST_PATH / file_name,
-            Filename=result_path
+            Filename=result_path,
         )
 
     except Exception as exc:
@@ -132,25 +132,18 @@ def call_with_logging(command: str, password_prefix: str | None = None) -> str:
     :raise `BackupError`
 
     """
-
-    def replace_pwd(command_string) -> str:
-        if password_prefix:
-            password_mask = "*****"
-            pattern = r'({}=")(.*?)(")'.format(password_prefix)
-            if re.search(pattern, command_string):
-                return re.sub(pattern, r'\1{}\3'.format(password_mask), command_string)
-
-        return command_string
-
-    command = replace_pwd(command.strip())
+    command = command.strip()
     logger = logger_ctx.get(module_logger)
 
-    logger.debug(f"Call command [{command}] ... ")
+    logger.debug(
+        "Call command [%s] ... ", replace_password_with_mask(command, prefix=password_prefix)
+    )
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b""
     output = output.decode("utf-8")
     output_lower = output.lower().strip()
+
     if "error" in output_lower or "fail" in output_lower:
         raise BackupError(output.removeprefix("Error: "))
 
@@ -327,7 +320,9 @@ class LoggerContext:
         self.logger.log(level, msg, *args, exc_info=exception)
 
 
-def validate_envar_option(_, param: click.Option, value: T, required_vars: list[str] | None = None) -> T:
+def validate_envar_option(
+    _, param: click.Option, value: T, required_vars: list[str] | None = None
+) -> T:
     required_vars = required_vars or ENV_VARS_REQUIRES.get(value)
     if value and (missed_vars := check_env_variables(*required_vars, raise_exception=False)):
         raise click.UsageError(
@@ -343,3 +338,34 @@ def split_option_values(_, param: click.Option, values: str, split_char: str = "
         validate_envar_option(_, param, value)
 
     return split_values
+
+
+def replace_password_with_mask(command: str, prefix: str | None = None, mask: str = "*****") -> str:
+    """
+    Allows to find password in command and replace it with provided mask
+    :param command: source command which can contain password
+    :param prefix: prefix to search password in command
+    :param mask: mask to replace password in command
+
+    >>> replace_password_with_mask("PGPASSWORD=test-password psql ... ", prefix="PGPASSWORD=")
+    'PGPASSWORD=***** psql ...'
+    >>> replace_password_with_mask('PGPASSWORD="test-password" psql ... ', prefix="PGPASSWORD=")
+    'PGPASSWORD="*****" psql ...'
+    >>> replace_password_with_mask('PGPASSWORD=""test-password" psql ... ', prefix="PGPASSWORD=")
+    'PGPASSWORD=""*****" psql ...'
+    >>> replace_password_with_mask('mysqldump -u user -ptest-password ... ', prefix="-p")
+    'mysqldump -u user -p***** ... '
+    >>> replace_password_with_mask('mysqldump -u user -p"test-password" ... ', prefix="-p")
+    'mysqldump -u user -p"*****" ... '
+
+    skip masking (no prefix provided):
+    >>> replace_password_with_mask('mysqldump -u user -p"test-password" ... ')
+    'mysqldump -u user -p"test-password" ... '
+
+    """
+    if prefix:
+        pattern = rf'({prefix}"*)(.*?)(")'  # searches string by prefix
+        if re.search(pattern, command):
+            return re.sub(pattern, rf"\1{mask}\3", command)
+
+    return command

@@ -119,8 +119,7 @@ class MySQLHandler(BaseHandler):
             mysqldump -P {port} -h {host} -u {user} -p"{password}" {db_name} > {backup_path}
         """
         return call_with_logging(
-            command=backup_command.format(**command_kwargs),
-            password_prefix="-p"  # TODO: test it!
+            command=backup_command.format(**command_kwargs), password_prefix="-p"  # TODO: test it!
         )
 
     def _do_restore(self, file_path: Path) -> None:
@@ -157,7 +156,7 @@ class PGServiceHandler(BaseHandler):
         """
         return call_with_logging(
             command=backup_command.format(**self.command_kwargs),
-            password_prefix="PGPASSWORD",
+            password_prefix="PGPASSWORD=",
         )
 
     def _do_restore(self, file_path: Path) -> None:
@@ -181,7 +180,7 @@ class PGServiceHandler(BaseHandler):
         """
         result = call_with_logging(
             command.format(**self.command_kwargs),
-            password_prefix="PGPASSWORD",
+            password_prefix="PGPASSWORD=",
         )
         if exists := (result.strip() != ""):
             self.logger.debug("[%s] Detected existing DB", self.db_name)
@@ -194,7 +193,7 @@ class PGServiceHandler(BaseHandler):
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
             -c "DROP DATABASE IF EXISTS {db_name}"  
         """
-        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD")
+        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
     def _create_db(self):
         self.logger.info(f"[%s] Creating new DB...", self.db_name)
@@ -202,14 +201,14 @@ class PGServiceHandler(BaseHandler):
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
             -c "CREATE DATABASE {db_name}"  
         """
-        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD")
+        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
     def _restore_db(self):
         self.logger.info(f"[%s] Restoring DB...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}  
         """
-        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD")
+        call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
 
 class PGDockerHandler(BaseHandler):
@@ -284,7 +283,7 @@ class PGDockerHandler(BaseHandler):
         call_with_logging(command)
 
     def _wrap_psql_in_docker(self, command) -> str:
-        return self._wrap_do_in_docker(f"psql -c \"{command}\"")
+        return self._wrap_do_in_docker(f'psql -c "{command}"')
 
     def _wrap_do_in_docker(self, command: str) -> str:
         return f'docker exec -t {self.container_name} sh -c "{command}"'
