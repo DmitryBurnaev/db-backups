@@ -62,12 +62,7 @@ def s3_upload(db_name: str, backup_path: Path) -> None:
     dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
     try:
         logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
-        s3.upload_file(
-            Filename=backup_path,
-            Bucket=settings.S3_BUCKET_NAME,
-            Key=dst_path,
-        )
-
+        s3.upload_file(Filename=backup_path, Bucket=settings.S3_BUCKET_NAME, Key=dst_path)
     except Exception as exc:
         logger.exception("Couldn't upload result backup to s3")
         raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc

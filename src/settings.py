@@ -21,9 +21,8 @@ MYSQL_PASSWORD = os.getenv("DB_BACKUP_MYSQL_PASSWORD", "password")
 
 PG_USER = os.getenv("DB_BACKUP_PG_USER", "postgres")
 PG_PASSWORD = os.getenv("DB_BACKUP_PG_PASSWORD")
-PG_DUMP_BIN = os.getenv(
-    "DB_BACKUP_PG_DUMP_BIN", "pg_dump"
-)  # or specific /usr/lib/postgresql/{ver}/pg_dump
+# common pg_dump's binary or specific /usr/lib/postgresql/{ver}/pg_dump one:
+PG_DUMP_BIN = os.getenv("DB_BACKUP_PG_DUMP_BIN", "pg_dump")
 PG_HOST = os.getenv("DB_BACKUP_PG_HOST", "localhost")
 PG_PORT = os.getenv("DB_BACKUP_PG_PORT", "5432")
 
@@ -53,10 +52,8 @@ LOGGING = {
             "backupCount": 20,
             "encoding": "utf8",
         },
-        # "console": {"class": "logging.StreamHandler", "level": LOG_LEVEL, "formatter": "simple"},
     },
     "loggers": {"": {"handlers": ["default"], "level": LOG_LEVEL, "propagate": True}},
-    # "loggers": {"": {"handlers": ["default", "console"], "level": LOG_LEVEL, "propagate": True}},
 }
 
 DATE_FORMAT = "%Y-%m-%d"

@@ -212,6 +212,7 @@ class PGServiceHandler(BaseHandler):
 
 
 class PGDockerHandler(BaseHandler):
+    """ Backups and restores PG-database inside docker container """
     service = "postgres-docker"
     required_variables = ()
 
