@@ -2,16 +2,17 @@ FROM python:3.12-slim-bookworm
 ARG POETRY_VERSION="1.7.1"
 ARG PIP_DEFAULT_TIMEOUT=300
 WORKDIR /app
+RUN mkdir /app/backups
 
 COPY pyproject.toml /app
 COPY poetry.lock /app
 
-RUN groupadd -r bkp-group && useradd -r -g bkp-user bkp-group
+RUN groupadd -r bkp-group && useradd -r -g bkp-group bkp-user
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
 		gcc \
 		libpq-dev \
-		python-dev \
+		python3-dev \
 		wget \
 		gnupg2 \
         openssl \
@@ -29,6 +30,6 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY src ./src
-RUN mkdir ./backups
 VOLUME ./backups
 RUN chown -R bkp-user:bkp-group /backups
+ENTRYPOINT ["poetry", "run"]
