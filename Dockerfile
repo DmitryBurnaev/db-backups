@@ -10,26 +10,17 @@ COPY poetry.lock /app
 RUN groupadd -r bkp-group && useradd -r -g bkp-group bkp-user
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-		gcc \
-		libpq-dev \
 		python3-dev \
-		wget \
-		gnupg2 \
         openssl \
-	&& sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt buster-pgdg main" > /etc/apt/sources.list.d/pgdg.list' \
-	&& wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
-	&& apt-get update \
-	&& apt-get install -y postgresql-client-15 \
+		postgresql-client-15 \
     && pip install poetry==${POETRY_VERSION} \
-    && poetry config --local virtualenvs.create false \
-    && PIP_DEFAULT_TIMEOUT=${PIP_DEFAULT_TIMEOUT} poetry install --only=main --no-root --no-cache --no-ansi --no-interaction  \
-    && pip uninstall -y poetry poetry-core \
-	&& apt-get purge -y --auto-remove gcc python-dev wget \
+    && PIP_DEFAULT_TIMEOUT=${PIP_DEFAULT_TIMEOUT} poetry install --only=main --no-cache --no-ansi --no-interaction  \
+	&& apt-get purge -y --auto-remove python3-dev \
 	&& apt-get -y autoremove \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY src ./src
 VOLUME ./backups
-RUN chown -R bkp-user:bkp-group /backups
+RUN chown -R bkp-user:bkp-group ./backups
 ENTRYPOINT ["poetry", "run"]
