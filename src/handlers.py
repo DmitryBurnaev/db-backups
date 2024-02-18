@@ -32,7 +32,7 @@ class BaseHandler(ABC):
         self.extra_kwargs = extra_kwargs
 
     def backup(self) -> Path:
-        self.logger.info(f"[%s] handle backup via %s ... ", self.db_name, self.service)
+        self.logger.info("[%s] handle backup via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         backup_stdout = self._do_backup()
         if not self.backup_path.exists():
@@ -58,7 +58,7 @@ class BaseHandler(ABC):
         return self.compressed_backup_path
 
     def restore(self, file_path: Path) -> None:
-        self.logger.info(f"[%s] handle restore via %s ... ", self.db_name, self.service)
+        self.logger.info("[%s] handle restore via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         if not file_path.exists():
             raise RestoreBackupError(f"Backup doesn't exist {file_path}")
@@ -83,7 +83,7 @@ class BaseHandler(ABC):
         return call_with_logging(command)
 
     def _do_unzip(self, compressed_backup_path: Path) -> Path:
-        current_tmp_dir, file_name = compressed_backup_path.parent, compressed_backup_path.name
+        current_tmp_dir = compressed_backup_path.parent
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
         result_file = current_tmp_dir / self.backup_path.name
         if not result_file.is_file():
@@ -119,7 +119,8 @@ class MySQLHandler(BaseHandler):
             mysqldump -P {port} -h {host} -u {user} -p"{password}" {db_name} > {backup_path}
         """
         return call_with_logging(
-            command=backup_command.format(**command_kwargs), password_prefix="-p"  # TODO: test it!
+            command=backup_command.format(**command_kwargs),
+            password_prefix="-p",
         )
 
     def _do_restore(self, file_path: Path) -> None:
@@ -152,7 +153,8 @@ class PGServiceHandler(BaseHandler):
 
     def _do_backup(self) -> str:
         backup_command = """
-            PGPASSWORD="{password}" {pg_dump_bin} -h{host} -p{port} -U{user} -d {db_name} -f {backup_path}    
+            PGPASSWORD="{password}" {pg_dump_bin} -h{host} -p{port} -U{user} \
+            -d {db_name} -f {backup_path}    
         """
         return call_with_logging(
             command=backup_command.format(**self.command_kwargs),
@@ -174,7 +176,7 @@ class PGServiceHandler(BaseHandler):
         self._restore_db()
 
     def _check_db_exists(self):
-        self.logger.debug(f"[%s] check DB exists...", self.db_name)
+        self.logger.debug("[%s] check DB exists...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -l | grep {db_name}   
         """
@@ -188,7 +190,7 @@ class PGServiceHandler(BaseHandler):
         return exists
 
     def _drop_db(self):
-        self.logger.info(f"[%s] Removing existing DB...", self.db_name)
+        self.logger.info("[%s] Removing existing DB...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
             -c "DROP DATABASE IF EXISTS {db_name}"  
@@ -196,7 +198,7 @@ class PGServiceHandler(BaseHandler):
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
     def _create_db(self):
-        self.logger.info(f"[%s] Creating new DB...", self.db_name)
+        self.logger.info("[%s] Creating new DB...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
             -c "CREATE DATABASE {db_name}"  
@@ -212,7 +214,8 @@ class PGServiceHandler(BaseHandler):
 
 
 class PGDockerHandler(BaseHandler):
-    """ Backups and restores PG-database inside docker container """
+    """Backups and restores PG-database inside docker container"""
+
     service = "postgres-docker"
     required_variables = ()
 
@@ -265,12 +268,12 @@ class PGDockerHandler(BaseHandler):
         return exists
 
     def _drop_db(self):
-        self.logger.info(f"[%s] Removing existing DB...", self.db_name)
+        self.logger.info("[%s] Removing existing DB...", self.db_name)
         command = self._wrap_psql_in_docker(f"DROP DATABASE IF EXISTS {self.db_name}")
         call_with_logging(command)
 
     def _create_db(self):
-        self.logger.info(f"[%s] Creating new DB...", self.db_name)
+        self.logger.info("[%s] Creating new DB...", self.db_name)
         command = self._wrap_psql_in_docker(f"CREATE DATABASE {self.db_name}")
         call_with_logging(command)
 

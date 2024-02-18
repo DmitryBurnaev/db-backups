@@ -20,7 +20,7 @@ from src.run import logger_ctx
 from src.settings import DATE_FORMAT, TMP_BACKUP_DIR
 
 module_logger = logging.getLogger(__name__)
-ENCRYPT_PASS = "env:DB_BACKUP_ENCRYPT_PASS"
+ENCRYPT_PASS = "env:ENCRYPT_PASS"
 T = TypeVar("T")
 
 
@@ -59,7 +59,7 @@ def s3_upload(db_name: str, backup_path: Path) -> None:
     )
     s3 = session.client(service_name="s3", endpoint_url=settings.S3_STORAGE_URL)
 
-    dst_path = os.path.join(settings.S3_DST_PATH, backup_path.name)
+    dst_path = os.path.join(settings.S3_PATH, backup_path.name)
     try:
         logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         s3.upload_file(Filename=backup_path, Bucket=settings.S3_BUCKET_NAME, Key=dst_path)
@@ -98,14 +98,14 @@ def s3_download(db_name: str, date: datetime.date) -> Path:
         result_path = settings.TMP_BACKUP_DIR / file_name
         logger.debug(
             "Executing request (download) from S3: %s/%s -> %s",
-            settings.S3_DST_PATH,
+            settings.S3_PATH,
             file_name,
             result_path,
         )
         # TODO: recheck downloading logic
         s3.download_file(
             Bucket=settings.S3_BUCKET_NAME,
-            Object=settings.S3_DST_PATH / file_name,
+            Object=settings.S3_PATH / file_name,
             Filename=result_path,
         )
 
@@ -136,6 +136,7 @@ def call_with_logging(command: str, password_prefix: str | None = None) -> str:
     po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b""
+    output += po.stdout.read() if po.stdout else b""
     output = output.decode("utf-8")
     output_lower = output.lower().strip()
 
@@ -199,8 +200,7 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
     missed_variables = []
     for variable in env_variables:
-        settings_var = variable.removesuffix("DB_BACKUP_")
-        if not any((os.getenv(variable), getattr(settings, settings_var, None))):
+        if not any((os.getenv(variable), getattr(settings, variable, None))):
             missed_variables.append(variable)
 
     if missed_variables:
@@ -217,6 +217,7 @@ def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
     logger = logger_ctx.get(module_logger)
     dest_dir = Path(dst)
     if not dest_dir.exists():
+        logger.debug(f"Destination directory does not exist: {dest_dir}. Creating ...")
         dest_dir.mkdir(parents=True, exist_ok=True)
 
     if not dest_dir.is_dir():
@@ -226,8 +227,12 @@ def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
         call_with_logging(f"cp {src} {dest_dir}")
     except Exception as exc:
         raise BackupError(f"Couldn't copy backup from {src} to '{dest_dir}': {exc!r}")
-    else:
-        logger.info("[%s] backup copied to %s", db_name, dest_dir / src.name)
+
+    result_file = dest_dir / src.name
+    if not result_file.exists():
+        raise BackupError(f"Backup file wasn't copied from: {src} to '{result_file}'")
+
+    logger.info("[%s] backup copied to %s", db_name, result_file)
 
 
 def remove_file(file_path: Path):

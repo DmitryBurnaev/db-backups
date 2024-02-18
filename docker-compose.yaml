@@ -1,15 +1,12 @@
 version: '3'
 services:
-  backup:
+  do:
     image:
       db-backups
     build:
       context: .
     env_file:
       - .env
-    networks:
-      - internal-subnet
-
-networks:
-  internal-subnet:
-    external: true
+    volumes:
+      - ./backups:/db-backups/backups
+    network_mode: "host"

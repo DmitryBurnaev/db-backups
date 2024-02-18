@@ -1,13 +1,13 @@
 ENV_VARS_REQUIRES = {
     "S3": (
-        "DB_BACKUP_S3_REGION_NAME",
-        "DB_BACKUP_S3_STORAGE_URL",
-        "DB_BACKUP_S3_ACCESS_KEY_ID",
-        "DB_BACKUP_S3_SECRET_ACCESS_KEY",
-        "DB_BACKUP_S3_BUCKET_NAME",
-        "DB_BACKUP_S3_PATH",
+        "S3_REGION_NAME",
+        "S3_STORAGE_URL",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_BUCKET_NAME",
+        "S3_PATH",
     ),
-    "LOCAL": ("DB_BACKUP_LOCAL_PATH",),
-    "ENCRYPT": ("DB_BACKUP_LOCAL_PATH",),
+    "LOCAL": ("LOCAL_PATH",),
+    "ENCRYPT": ("ENCRYPT_PASS",),
 }
 BACKUP_LOCATIONS = ("S3", "LOCAL")
