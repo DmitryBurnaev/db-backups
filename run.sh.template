@@ -1,11 +1,14 @@
 #!/bin/sh
 PATH="$PATH:/usr/local/bin"
-# run with local interpreter
-pipenv run python -m src.run <DB_NAME> --handler docker_postgres --container postgres --s3
+DB_NAME="my_db"
+# run backup with local interpreter (and upload to S3)
+python -m src.run backup "$DB_NAME" --from PG-CONTAINER --container postgres --to S3
+
 
 
 # run via docker (and upload to S3)
-docker-compose up --build
-docker-compose run \
-  --volume /var/backups:/backups/backups \
-  backup python -m src.run <DB_NAME> --handler postgres --container postgres --s3
+docker build . -t db-backups
+docker run \
+  backup "$DB_NAME" --FROM PG-SERVICE --to S3 \
+  --rm \
+  db-backups
