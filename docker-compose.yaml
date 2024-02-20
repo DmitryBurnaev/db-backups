@@ -8,5 +8,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./backups:/db-backups/backups
+      - ${LOCAL_PATH}:/db-backups/backups
     network_mode: "host"

@@ -33,7 +33,7 @@ RUN chown -R db-backups:db-backups ./logs
 VOLUME ./backups ./logs
 
 COPY --from=code-layer --chown=db-backups:db-backups /db-backups ./src
-ENV LOCAL_PATH=./backups \
+ENV LOCAL_PATH_IN_CONTAINER=./backups \
     LOG_PATH=./logs
 
 USER db-backups

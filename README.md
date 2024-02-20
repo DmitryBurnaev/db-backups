@@ -2,18 +2,83 @@
 
 Allows to back up PG and Mysql databases through their client or docker docker-container.
 
-## Installation and usage
-### Installation
-*db-backups* requires pipenv
+## Installation and usage (docker)
+
+### Pull last version
+```shell
+export DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+git clone [repository_url] "${DB_BACKUPS_TOOL_PATH}"
+```
+
+### ENV configuration
+```shell
+cd $DB_BACKUPS_TOOL_PATH
+cp .env.template .env
+nano .env  # set required variables
+```
+
+### Run backups
+Preparations (build docker's image locally):
+```shell
+docker build . -t db-backups
+```
+
+Help info:
+```shell
+docker compose run --rm do backup --help
+```
+
+Run backup with copying result on local storage:
+```shell
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=./backups  # path on your host machine
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+
+```
+
+Run backup with copying result to S3 storage (and encrypt result):
+```shell
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
+echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
+
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+
+```
+
+To store backup on host's directory (to $(pwd)/backups)
+```shell
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+
+docker build . -t db-backups
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL 
+
+
+poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL --encrypt
+# TODO: fix commands
+docker-compose up --build
+docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
+```
+To store backup on host's directory (to $(pwd)/backups)
+
+
+
+
+*db-backups* requires poetry
 ```shell script
 sudo pip install poetry
 ```
 
 ```shell script
-export TOOL_PATH="/opt/db-backups"
+export DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 
-git clone [repository_url] "${TOOL_PATH}"
-cd "${TOOL_PATH}"
+git clone [repository_url] "${DB_BACKUPS_TOOL_PATH}"
+cd "${DB_BACKUPS_TOOL_PATH}"
 poetry install
 
 cp .env.template .env
@@ -25,7 +90,7 @@ nano .env # modify required variables
 ### Run manually (backup)
 To get started right away (from docker container, encrypt and upload to S3):
 ```shell script
-cd "${TOOL_PATH}"
+cd "${DB_BACKUPS_TOOL_PATH}"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL --encrypt
@@ -33,7 +98,7 @@ poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL
 ### Run manually (restore)
 To run backup (from file in local directory, decrypt and apply to postgres (as a service)):
 ```shell script
-cd "${TOOL_PATH}"
+cd "${DB_BACKUPS_TOOL_PATH}"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE -c ${CONTAINER_NAME}

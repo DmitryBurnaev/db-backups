@@ -1,5 +1,4 @@
 #!/bin/sh
-PATH="$PATH:/usr/local/bin"
 DB_NAME="my_db"
 # run backup with local interpreter (and upload to S3)
 python -m src.run backup "$DB_NAME" --from PG-CONTAINER --container postgres --to S3

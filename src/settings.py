@@ -33,8 +33,8 @@ S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_PATH = os.getenv("S3_PATH")
 
-LOCAL_PATH: Path = Path(os.getenv("LOCAL_PATH", "./backups"))
-TMP_BACKUP_DIR: Path = Path(tempfile.mkdtemp())
+LOCAL_PATH = Path(os.getenv("LOCAL_PATH_IN_CONTAINER") or os.getenv("LOCAL_PATH", "./backups"))
+TMP_BACKUP_DIR = Path(tempfile.mkdtemp())
 
 LOGGING = {
     "version": 1,
