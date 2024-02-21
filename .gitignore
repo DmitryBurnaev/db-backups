@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 venv/
 log/
+logs/
 backups/
-.env
+.env*
 run.sh
 .python-version

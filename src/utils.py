@@ -133,7 +133,7 @@ def call_with_logging(command: str, password_prefix: str | None = None) -> str:
     logger.debug(
         "Call command [%s] ... ", replace_password_with_mask(command, prefix=password_prefix)
     )
-    po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE)
+    po = subprocess.Popen(command, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
     output = po.stderr.read() if po.stderr else b""
     output += po.stdout.read() if po.stdout else b""

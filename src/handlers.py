@@ -85,6 +85,7 @@ class BaseHandler(ABC):
     def _do_unzip(self, compressed_backup_path: Path) -> Path:
         current_tmp_dir = compressed_backup_path.parent
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
+        # TODO: think about diff between DB name and file in zip-archive (may be we can provide filename directly?)
         result_file = current_tmp_dir / self.backup_path.name
         if not result_file.is_file():
             raise RestoreBackupError(f"Backup archive doesn't contain {self.backup_path.name}")
@@ -150,6 +151,7 @@ class PGServiceHandler(BaseHandler):
             "db_name": self.db_name,
             "backup_path": self.backup_path,
         }
+        print(self.command_kwargs)
 
     def _do_backup(self) -> str:
         backup_command = """
@@ -206,7 +208,8 @@ class PGServiceHandler(BaseHandler):
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
     def _restore_db(self):
-        self.logger.info(f"[%s] Restoring DB...", self.db_name)
+        self.logger.info("[%s] Restoring DB...", self.db_name)
+        print(self.command_kwargs)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}  
         """
@@ -259,7 +262,7 @@ class PGDockerHandler(BaseHandler):
         self._restore_db()
 
     def _check_db_exists(self):
-        self.logger.debug(f"[%s] check DB exists...", self.db_name)
+        self.logger.debug("[%s] check DB exists...", self.db_name)
         command = self._wrap_do_in_docker(f"psql  -l | grep {self.db_name}")
         result = call_with_logging(command).strip()
         if exists := result != "0":
@@ -278,7 +281,7 @@ class PGDockerHandler(BaseHandler):
         call_with_logging(command)
 
     def _restore_db(self):
-        self.logger.info(f"[%s] Restoring DB...", self.db_name)
+        self.logger.info("[%s] Restoring DB...", self.db_name)
         backup_path_in_container = f"/tmp/{self.backup_path.name}"
         call_with_logging(
             f"docker cp {self.backup_path} {self.container_name}:{backup_path_in_container}"
