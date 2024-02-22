@@ -1,3 +1,7 @@
+"""
+Defines run logic for restore's hanlders
+"""
+import sys
 import datetime
 import logging
 
@@ -20,7 +24,7 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     type=str,
 )
 @click.option(
-    "--from",
+    "--from",  # TODO: add support for concrete file restoring
     "source",
     metavar="BACKUP_SOURCE",
     required=True,
@@ -97,7 +101,7 @@ def cli(
 
         case _:
             logger.critical("Unknown source '%s'", source)
-            exit(1)
+            sys.exit(1)
 
     try:
         if str(backup_full_path).endswith(".enc"):
@@ -107,7 +111,7 @@ def cli(
 
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
-        exit(2)
+        sys.exit(2)
 
     utils.remove_file(backup_full_path)
-    logger.info("[%s] BACKUP SUCCESS", db)
+    logger.info("[%s] RESTORE SUCCESS", db)

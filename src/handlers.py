@@ -151,7 +151,6 @@ class PGServiceHandler(BaseHandler):
             "db_name": self.db_name,
             "backup_path": self.backup_path,
         }
-        print(self.command_kwargs)
 
     def _do_backup(self) -> str:
         backup_command = """
