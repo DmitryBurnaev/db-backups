@@ -1,6 +1,6 @@
-<h2 align="center">Simple backup databases to local directory and upload S3-storage (optional)</h2>
+<h2 align="center">Simple backup databases to a local directory or S3-storage</h2>
 
-Allows to back up PG and Mysql databases through their client or docker docker-container.
+Allows to backup PG databases via native pgdump (connect to service) or pgdump inside specific docker-container.
 
 ## Installation and usage (docker)
 
@@ -30,9 +30,12 @@ docker compose run --rm do backup --help
 
 Run backup with copy result on local storage:
 ```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL
@@ -44,17 +47,21 @@ docker run \
   --rm \
   db-backups \
   backup ${DB_NAME} --from PG-SERVICE --to LOCAL
-
 ```
 
 Run backup with copy result to S3 storage (and encrypt result):
 ```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
+
+cd $DB_BACKUPS_TOOL_PATH
 echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
 
+# NOTE: you need to fill S3_* specific env in .env file before
 docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+
 # or via docker run:
 docker run \
   --volume ${LOCAL_PATH}:/db-backups/backups \
@@ -63,7 +70,6 @@ docker run \
   --rm \
   db-backups \
   backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
-
 ```
 
 ### Run restore
@@ -79,13 +85,20 @@ docker compose run --rm do restore --help
 
 Run restore from local / s3 directory (find file for current day):
 ```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
-# find and restore backup file for current day
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
 docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
+docker compose run --rm do restore ${DB_NAME} --from S3 --to PG-SERVICE
+
 # or via docker run:
 docker run \
   --volume ${LOCAL_PATH}:/db-backups/backups \
@@ -97,18 +110,22 @@ docker run \
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
 docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
-
-
 ```
 
-Run backup with copy result to S3 storage (and encrypt result):
+Run restore from S3 directory (find file for current day):
 ```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
-ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
-echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
 
-docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
 # or via docker run:
 docker run \
   --volume ${LOCAL_PATH}:/db-backups/backups \
@@ -116,45 +133,28 @@ docker run \
   --env-file $(pwd)/.env \
   --rm \
   db-backups \
-  backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+  restore ${DB_NAME} --from LOCAL --to PG-SERVICE
 
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
 ```
 
+## Installation and usage (native run)
 
-To store backup on host's directory (to $(pwd)/backups)
+### Pull last version
 ```shell
-DB_NAME="podcast_service"
-CONTAINER_NAME="postgres-12"
-
-docker build . -t db-backups
-docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL 
-
-
-poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL --encrypt
-# TODO: fix commands
-docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
-```
-To store backup on host's directory (to $(pwd)/backups)
-
-
-
-
-*db-backups* requires poetry
-```shell script
-sudo pip install poetry
-```
-
-```shell script
 export DB_BACKUPS_TOOL_PATH="/opt/db-backups"
-
 git clone [repository_url] "${DB_BACKUPS_TOOL_PATH}"
-cd "${DB_BACKUPS_TOOL_PATH}"
-poetry install
-
-cp .env.template .env
-nano .env # modify required variables
 ```
+
+### ENV configuration
+```shell
+cd $DB_BACKUPS_TOOL_PATH
+cp .env.template .env
+nano .env  # set required variables
+```
+
+
 
 ### Usage
 
