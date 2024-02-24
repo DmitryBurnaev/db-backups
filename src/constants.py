@@ -1,3 +1,18 @@
+from enum import StrEnum
+
+
+class BackupLocation(StrEnum):
+    S3 = "S3"
+    LOCAL_PATH = "LOCAL_PATH"
+    LOCAL_FILE = "LOCAL_FILE"
+
+
+class BackupHandler(StrEnum):
+    MYSQL = "MYSQL"
+    PG_SERVICE = "PG-SERVICE"
+    PG_CONTAINER = "PG-CONTAINER"
+
+
 ENV_VARS_REQUIRES = {
     "S3": (
         "S3_REGION_NAME",
@@ -7,7 +22,7 @@ ENV_VARS_REQUIRES = {
         "S3_BUCKET_NAME",
         "S3_PATH",
     ),
-    "LOCAL": ("LOCAL_PATH",),
+    "LOCAL_PATH": ("LOCAL_PATH",),
     "ENCRYPT": ("ENCRYPT_PASS",),
 }
-BACKUP_LOCATIONS = ("S3", "LOCAL")
+BACKUP_LOCATIONS = tuple(BackupLocation.__members__.keys())

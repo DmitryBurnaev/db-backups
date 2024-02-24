@@ -1,20 +1,21 @@
 """
-Defines run logic for restore's hanlders
+Defines run logic for restore handlers
 """
 import sys
 import datetime
 import logging
+from pathlib import Path
 
 import click
 
 from src import utils, settings
+from src.constants import BACKUP_LOCATIONS, BackupHandler, BackupLocation
 from src.handlers import HANDLERS
 from src.run import logger_ctx
 from src.settings import DATE_FORMAT
 from src.utils import LoggerContext, validate_envar_option
 
 module_logger = logging.getLogger("backup")
-BACKUP_SOURCE = ("S3", "LOCAL")
 
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
@@ -24,14 +25,22 @@ BACKUP_SOURCE = ("S3", "LOCAL")
     type=str,
 )
 @click.option(
-    "--from",  # TODO: add support for concrete file restoring
-    "source",
+    "--from",
+    "backup_source",
     metavar="BACKUP_SOURCE",
     required=True,
-    show_choices=BACKUP_SOURCE,
+    show_choices=BACKUP_LOCATIONS,
     callback=validate_envar_option,
-    type=click.Choice(list(BACKUP_SOURCE)),
-    help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_SOURCE}",
+    type=click.Choice(BACKUP_LOCATIONS),
+    help=f"Source of backup file, that will be used for downloading/copying: {BACKUP_LOCATIONS}",
+)
+@click.option(
+    "-f",
+    "--file",
+    "source_file",
+    metavar="LOCAL_FILE",
+    type=str,
+    help="Path to the local file to restore (required param for DESTINATION=LOCAL_FILE).",
 )
 @click.option(
     "--to",
@@ -63,10 +72,11 @@ BACKUP_SOURCE = ("S3", "LOCAL")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
     db: str,
-    source: str,
-    handler: str,
+    backup_source: BackupLocation,
+    backup_handler: BackupHandler,
     docker_container: str | None,
     date: datetime.date,
+    source_file: str | None,
     verbose: bool,
     no_colors: bool,
 ):
@@ -76,31 +86,43 @@ def cli(
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
-    if "docker" in handler and not docker_container:
-        logger.critical("Using handler '%s' requires '--docker-container' argument", handler)
+    if backup_handler == BackupHandler.PG_CONTAINER and not docker_container:
+        logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
+        exit(1)
+
+    if backup_source == BackupLocation.LOCAL_PATH and not source_file:
+        logger.critical("Using destination 'LOCAL_PATH' requires '--file' argument")
         exit(1)
 
     try:
-        restore_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+        handler = HANDLERS[backup_handler]
+        restore_handler = handler(db, container_name=docker_container, logger=logger)
     except KeyError:
-        logger.critical("Unknown handler '%s'", handler)
+        logger.critical("Unknown handler '%s'", backup_handler)
         exit(1)
 
     logger.info("Run restore logic...")
 
-    match source:
-        case "LOCAL":
+    match backup_source:
+        case "LOCAL_PATH":
             backup_full_path = utils.local_file_search_by_date(
                 db_name=db,
                 date=date,
                 directory=settings.LOCAL_PATH,
             )
+        case "LOCAL_FILE":
+            source_file = Path(source_file)
+            if not source_file.exists():
+                raise click.FileError("Source file does not exist")
+
+            backup_full_path = settings.TMP_BACKUP_DIR / source_file.name
+            utils.copy_file(db, src=source_file, dst=backup_full_path)
 
         case "S3":
             backup_full_path = utils.s3_download(db_name=db, date=date)
 
         case _:
-            logger.critical("Unknown source '%s'", source)
+            logger.critical("Unknown source '%s'", backup_source)
             sys.exit(1)
 
     try:
@@ -110,7 +132,7 @@ def cli(
         restore_handler.restore(backup_full_path)
 
     except Exception as exc:
-        logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
+        logger.exception("[%s] BACKUP FAILED: %r", db, exc)
         sys.exit(2)
 
     utils.remove_file(backup_full_path)

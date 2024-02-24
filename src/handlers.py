@@ -7,6 +7,7 @@ from typing import ClassVar, Type
 import click
 
 from src import settings
+from src.constants import BackupHandler
 from src.run import logger_ctx
 from src.utils import (
     check_env_variables,
@@ -295,8 +296,8 @@ class PGDockerHandler(BaseHandler):
         return f'docker exec -t {self.container_name} sh -c "{command}"'
 
 
-HANDLERS: dict[str, Type[BaseHandler]] = {
-    "MYSQL": MySQLHandler,
-    "PG-SERVICE": PGServiceHandler,
-    "PG-CONTAINER": PGDockerHandler,
+HANDLERS: dict[BackupHandler, Type[BaseHandler]] = {
+    BackupHandler.MYSQL: MySQLHandler,
+    BackupHandler.PG_SERVICE: PGServiceHandler,
+    BackupHandler.PG_CONTAINER: PGDockerHandler,
 }
