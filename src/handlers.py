@@ -84,6 +84,14 @@ class BaseHandler(ABC):
         return call_with_logging(command)
 
     def _do_unzip(self, compressed_backup_path: Path) -> Path:
+        if not compressed_backup_path.name.endswith("tar.gz"):
+            self.logger.debug(
+                "[%s] backup file %s seems already unzipped (skip unzip process)",
+                self.db_name,
+                compressed_backup_path,
+            )
+            return compressed_backup_path
+
         current_tmp_dir = compressed_backup_path.parent
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
         # TODO: think about diff between DB name and file in zip-archive (may be we can provide filename directly?)
