@@ -154,49 +154,94 @@ cp .env.template .env
 nano .env  # set required variables
 ```
 
+### Run backups
 
-
-### Usage
-
-### Run manually (backup)
-To get started right away (from docker container, encrypt and upload to S3):
-```shell script
-cd "${DB_BACKUPS_TOOL_PATH}"
-DB_NAME="podcast_service"
-CONTAINER_NAME="postgres-12"
-poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL --encrypt
-```
-### Run manually (restore)
-To run backup (from file in local directory, decrypt and apply to postgres (as a service)):
-```shell script
-cd "${DB_BACKUPS_TOOL_PATH}"
-DB_NAME="podcast_service"
-CONTAINER_NAME="postgres-12"
-poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE -c ${CONTAINER_NAME}
-```
-
-### Run backup via docker (local backup only)
-To store backup on host's directory
-```shell script
-# TODO: fix commands
-docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
-```
-
-### Run postgres backup via docker (s3 backup)
-To run backup process from docker with db-backup service
-```shell script
-docker-compose up --build
-docker-compose run backup python -m src.run backup <DB_NAME> --handler postgres --s3
-```
-
-### Run postgres backup via docker (s3 backup) + encrypt
-To run backup process from docker with db-backup service
+Help info:
 ```shell
-echo "ENCRYPT_PASS=<YOUR_SECRET_KEY>" > .env
-docker-compose up --build
-docker-compose run backup python -m src.run backup <DB_NAME> -h postgres -s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
+poetry run backup --help
+
+# or via native run
+poetry shell
+python -m run backup --help
+
 ```
+
+Run backup with copy result on local storage:
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+poetry run backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+# or via PG-CONTAINER
+poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL
+
+```
+
+Run backup with copy result to S3 storage (and encrypt result):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
+
+# NOTE: you need to fill S3_* specific env in .env file before
+poetry run backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+
+```
+
+### Run restore
+Preparations (build docker's image locally):
+
+Help info:
+```shell
+poetry run restore --help
+```
+
+Run restore from local / s3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
+poetry run restore ${DB_NAME} --from S3 --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
+Run restore from S3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
 
 ### Command line options (backup)
 ```text
@@ -245,15 +290,7 @@ Options:
   --help                          Show this message and exit.
 ```
 
-
-### ENV configuration
-```shell script
-cd <path_to_project>
-cp .env.template .env
-nano .env  # set required variables
-```
-
-### RUN configuration (periodical running) 
+## RUN configuration (periodical running) 
 ```shell script
 cd <path_to_project>
 cp run.sh.template run.sh
@@ -263,14 +300,7 @@ crontab -e
 0 2 * * * cd <path_to_project> && /.run.sh >> /var/log/db_backups.cron.log 2>&1 # every night at 02:00
 ```
 
-### Get help
-```shell script
-cd <path_to_project>
-pipenv run python -m src.run backup --help
-```
-
-
-### Environments
+## Environments
 
 Environment variables can be set manually or by updating `<path_to_project>/.env` file. 
 Note, variables from this file can't rewrite variables which are set manually 
