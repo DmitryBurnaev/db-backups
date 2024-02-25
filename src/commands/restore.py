@@ -90,7 +90,7 @@ def cli(
         logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
         exit(1)
 
-    if backup_source == BackupLocation.LOCAL_PATH and not source_file:
+    if backup_source == BackupLocation.LOCAL and not source_file:
         logger.critical("Using destination 'LOCAL_PATH' requires '--file' argument")
         exit(1)
 

@@ -3,8 +3,8 @@ from enum import StrEnum
 
 class BackupLocation(StrEnum):
     S3 = "S3"
-    LOCAL_PATH = "LOCAL_PATH"
-    LOCAL_FILE = "LOCAL_FILE"
+    LOCAL = "LOCAL"
+    FILE = "FILE"
 
 
 class BackupHandler(StrEnum):

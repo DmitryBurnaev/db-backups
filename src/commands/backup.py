@@ -1,9 +1,10 @@
 import logging
+from functools import partial
 
 import click
 
 from src import utils, settings
-from src.handlers import HANDLERS, BaseHandler
+from src.handlers import HANDLERS, BaseHandler, HANDLERS_HUMAN_READABLE
 from src.constants import BACKUP_LOCATIONS, BackupLocation, BackupHandler
 from src.run import logger_ctx
 from src.utils import LoggerContext, split_option_values
@@ -22,9 +23,9 @@ module_logger = logging.getLogger("backup")
     "backup_handler",
     metavar="BACKUP_HANDLER",
     required=True,
-    show_choices=HANDLERS.keys(),
-    type=click.Choice(list(HANDLERS.keys())),
-    help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
+    show_choices=HANDLERS_HUMAN_READABLE,
+    type=click.Choice(HANDLERS_HUMAN_READABLE),
+    help=f"Handler, that will be used for backup",
 )
 @click.option(
     "-c",
@@ -43,7 +44,7 @@ module_logger = logging.getLogger("backup")
         f"Comma separated list of destination places (result backup file will be moved to). "
         f"Possible values: {BACKUP_LOCATIONS}"
     ),
-    callback=split_option_values,
+    callback=partial(split_option_values, result_type=BackupLocation),
 )
 @click.option(
     "-f",
@@ -66,7 +67,7 @@ def cli(
     backup_handler: BackupHandler,
     docker_container: str | None,
     encrypt: bool,
-    destination: tuple[str, ...],
+    destination: tuple[BackupLocation, ...],
     destination_file: str | None,
     verbose: bool,
     no_colors: bool,
@@ -83,7 +84,7 @@ def cli(
         logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
         exit(1)
 
-    if BackupLocation.LOCAL_PATH in destination and not destination_file:
+    if BackupLocation.LOCAL in destination and not destination_file:
         logger.critical("Using destination 'LOCAL_PATH' requires '--file' argument")
         exit(1)
 
@@ -100,13 +101,13 @@ def cli(
         if encrypt:
             backup_full_path = utils.encrypt_file(db_name=db, file_path=backup_full_path)
 
-        if "LOCAL_PATH" in destination:
+        if BackupLocation.LOCAL in destination:
             utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
 
-        if "LOCAL_FILE" in destination:
+        if BackupLocation.FILE in destination:
             utils.copy_file(db_name=db, src=backup_full_path, dst=destination_file)
 
-        if "S3" in destination:
+        if BackupLocation.S3 in destination:
             utils.s3_upload(db_name=db, backup_path=backup_full_path)
 
     except Exception as exc:

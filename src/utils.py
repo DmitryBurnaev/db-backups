@@ -6,9 +6,10 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime
+from enum import StrEnum
 from operator import itemgetter
 from pathlib import Path
-from typing import ClassVar, TypeVar
+from typing import ClassVar, TypeVar, Type
 from urllib.parse import urljoin
 
 import boto3
@@ -332,8 +333,19 @@ def validate_envar_option(
     return value
 
 
-def split_option_values(_, param: click.Option, values: str, split_char: str = ",") -> list[str]:
-    split_values = [v.strip() for v in values.split(split_char)]
+def split_option_values(
+    _,
+    param: click.Option,
+    values: str,
+    split_char: str = ",",
+    result_type: Type[StrEnum] | None = None
+) -> list[str | StrEnum]:
+    """ Split provided options to separated strings (or specific result_type) """
+    def cast(value: str):
+        value = value.strip().upper()
+        return result_type[value] if result_type else value
+
+    split_values = [cast(v) for v in values.split(split_char)]
     for value in split_values:
         validate_envar_option(_, param, value)
 

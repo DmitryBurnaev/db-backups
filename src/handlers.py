@@ -309,3 +309,4 @@ HANDLERS: dict[BackupHandler, Type[BaseHandler]] = {
     BackupHandler.PG_SERVICE: PGServiceHandler,
     BackupHandler.PG_CONTAINER: PGDockerHandler,
 }
+HANDLERS_HUMAN_READABLE: list[str] = [str(handler) for handler in HANDLERS.keys()]
