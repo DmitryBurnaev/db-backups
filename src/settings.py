@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
 
-load_dotenv(find_dotenv())
+load_dotenv(find_dotenv(filename=os.getenv("ENV_FILE", ".env")))
 
 BASE_DIR = Path(os.path.dirname(os.path.dirname(__file__)))
 SRC_DIR = BASE_DIR / "src"

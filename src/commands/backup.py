@@ -60,6 +60,7 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
+# TODO: provide env-file path
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
