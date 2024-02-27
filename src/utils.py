@@ -324,7 +324,7 @@ class LoggerContext:
 def validate_envar_option(
     _, param: click.Option, value: T, required_vars: list[str] | None = None
 ) -> T:
-    required_vars = required_vars or ENV_VARS_REQUIRES.get(value)
+    required_vars = required_vars or ENV_VARS_REQUIRES.get(value, [])
     if value and (missed_vars := check_env_variables(*required_vars, raise_exception=False)):
         raise click.UsageError(
             f"Parameter '{param.name}' requires setting values for variables: {missed_vars}"

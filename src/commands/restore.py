@@ -73,7 +73,7 @@ module_logger = logging.getLogger("backup")
 def cli(
     db: str,
     backup_source: BackupLocation,
-    backup_handler: BackupHandler,
+    handler: BackupHandler,
     docker_container: str | None,
     date: datetime.date,
     source_file: str | None,
@@ -86,31 +86,31 @@ def cli(
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
-    if backup_handler == BackupHandler.PG_CONTAINER and not docker_container:
-        logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
+    if handler == BackupHandler.PG_CONTAINER and not docker_container:
+        logger.critical("Using handler '%s' requires '--docker-container' argument", handler)
         exit(1)
 
-    if backup_source == BackupLocation.LOCAL and not source_file:
+    if backup_source == BackupLocation.FILE and not source_file:
         logger.critical("Using destination 'LOCAL_PATH' requires '--file' argument")
         exit(1)
 
     try:
-        handler = HANDLERS[backup_handler]
-        restore_handler = handler(db, container_name=docker_container, logger=logger)
+        handler_class = HANDLERS[handler]
+        restore_handler = handler_class(db, container_name=docker_container, logger=logger)
     except KeyError:
-        logger.critical("Unknown handler '%s'", backup_handler)
+        logger.critical("Unknown handler '%s'", handler)
         exit(1)
 
     logger.info("Run restore logic...")
 
     match backup_source:
-        case "LOCAL_PATH":
+        case "LOCAL":
             backup_full_path = utils.local_file_search_by_date(
                 db_name=db,
                 date=date,
                 directory=settings.LOCAL_PATH,
             )
-        case "LOCAL_FILE":
+        case "FILE":
             source_file = Path(source_file)
             if not source_file.exists():
                 raise click.FileError("Source file does not exist")
