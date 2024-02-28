@@ -1,4 +1,5 @@
 import dataclasses
+import glob
 import os
 import logging
 import re
@@ -9,6 +10,7 @@ from datetime import datetime
 from enum import StrEnum
 from operator import itemgetter
 from pathlib import Path
+import tempfile
 from typing import ClassVar, TypeVar, Type
 from urllib.parse import urljoin
 
@@ -155,6 +157,15 @@ def get_filename(db_name: str, suffix: str = "") -> str:
     now_time = datetime.now().strftime("%Y-%m-%d-%H%M%S")
     return f"{now_time}.{db_name}.backup{suffix}"
 
+
+def get_latest_file_by_mask(directory: Path, mask: str) -> Path | None:
+    """ Get latest file by mask in specified directory (ex.: find last *.sql file in dir) """
+    files = glob.glob(os.path.join(directory, "*.sql"))
+    if not files:
+        return None
+
+    latest_file = max(files, key=os.path.getmtime)
+    return Path(latest_file)
 
 def _check_encrypt_vars(function):
     def inner(*args, **kwargs):
