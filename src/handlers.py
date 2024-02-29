@@ -15,6 +15,7 @@ from src.utils import (
     BackupError,
     get_filename,
     RestoreBackupError,
+    get_latest_file_by_mask,
 )
 
 module_logger = logging.getLogger(__name__)
@@ -96,9 +97,10 @@ class BaseHandler(ABC):
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
 
         # TODO: think about diff between DB name and file in archive (may be provide filename?)
-        result_file = current_tmp_dir / self.backup_path.name.replace("_stage_clear", "")
-        if not result_file.is_file():
+        # result_file = current_tmp_dir / self.backup_path.name.replace("_stage_clear", "")
+        if not (result_file := get_latest_file_by_mask(current_tmp_dir, mask="*.sql")):
             raise RestoreBackupError(f"Backup archive doesn't contain {self.backup_path.name}")
+
         return result_file
 
     def _do_clean(self) -> str:

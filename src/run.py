@@ -14,7 +14,6 @@ from typing import Callable, Optional
 
 import click
 import sentry_sdk
-from dotenv import load_dotenv, find_dotenv
 
 from src import settings
 
