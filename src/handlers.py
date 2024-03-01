@@ -96,11 +96,10 @@ class BaseHandler(ABC):
         current_tmp_dir = compressed_backup_path.parent
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
 
-        # TODO: think about diff between DB name and file in archive (may be provide filename?)
-        # result_file = current_tmp_dir / self.backup_path.name.replace("_stage_clear", "")
         if not (result_file := get_latest_file_by_mask(current_tmp_dir, mask="*.sql")):
-            raise RestoreBackupError(f"Backup archive doesn't contain {self.backup_path.name}")
+            raise RestoreBackupError(f"Backup archive doesn't contain any .sql files")
 
+        print(f"Found {result_file=}")
         return result_file
 
     def _do_clean(self) -> str:
@@ -151,9 +150,9 @@ class PGServiceHandler(BaseHandler):
         "PG_PASSWORD",
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.command_kwargs = {
+    @property
+    def command_kwargs(self):
+        return {
             "pg_dump_bin": settings.PG_DUMP_BIN,
             "host": settings.PG_HOST,
             "port": settings.PG_PORT,
@@ -161,8 +160,6 @@ class PGServiceHandler(BaseHandler):
             "password": settings.PG_PASSWORD,
             "db_name": self.db_name,
             "backup_path": self.backup_path,
-            # TODO: rollback before merge
-            "backup_path_str": str(self.backup_path).replace("_stage_clear", "")
         }
 
     def _do_backup(self) -> str:
@@ -221,12 +218,12 @@ class PGServiceHandler(BaseHandler):
 
     def _restore_db(self):
         self.logger.info("[%s] Restoring DB...", self.db_name)
-        print(self.command_kwargs)
         command = """
-            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path_str}  
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}  
         """
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
         # TODO: check restore error for case: DEBUG: /bin/sh: /var/folders/nh/s3hkf57573953klldrl1nmq40000gn/T/tmpx_fjoun7/v_server_dev410.backup.sql: No such file or directory
+
 
 class PGDockerHandler(BaseHandler):
     """Backups and restores PG-database inside docker container"""
