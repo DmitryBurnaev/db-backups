@@ -99,7 +99,6 @@ class BaseHandler(ABC):
         if not (result_file := get_latest_file_by_mask(current_tmp_dir, mask="*.sql")):
             raise RestoreBackupError(f"Backup archive doesn't contain any .sql files")
 
-        print(f"Found {result_file=}")
         return result_file
 
     def _do_clean(self) -> str:

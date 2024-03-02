@@ -158,14 +158,23 @@ def get_filename(db_name: str, suffix: str = "") -> str:
     return f"{now_time}.{db_name}.backup{suffix}"
 
 
-def get_latest_file_by_mask(directory: Path, mask: str) -> Path | None:
-    """ Get latest file by mask in specified directory (ex.: find last *.sql file in dir) """
+def get_latest_file_by_mask(db_name: str, directory: Path, mask: str) -> Path | None:
+    """Get latest file by mask in specified directory (ex.: find last *.sql file in dir)"""
     logger = logger_ctx.get(module_logger)
     try:
-        return max(directory.glob(mask), key=os.path.getmtime)
+        found_file = max(directory.glob(mask), key=os.path.getmtime)
     except ValueError as exc:
         logger.error("Could not find file by mask '%s' in directory %s: %r", mask, directory, exc)
         return None
+
+    logger.debug(
+        "[%s] Found file %s (mask='%s') | (directory='%s')",
+        db_name,
+        found_file,
+        mask,
+        directory,
+    )
+    return None
 
 
 def _check_encrypt_vars(function):
@@ -350,9 +359,10 @@ def split_option_values(
     param: click.Option,
     values: str,
     split_char: str = ",",
-    result_type: Type[StrEnum] | None = None
+    result_type: Type[StrEnum] | None = None,
 ) -> list[str | StrEnum]:
-    """ Split provided options to separated strings (or specific result_type) """
+    """Split provided options to separated strings (or specific result_type)"""
+
     def cast(value: str):
         value = value.strip().upper()
         return result_type[value] if result_type else value
