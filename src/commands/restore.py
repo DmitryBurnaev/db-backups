@@ -104,12 +104,6 @@ def cli(
     logger.info("Run restore logic...")
 
     match backup_source:
-        case "LOCAL":
-            backup_full_path = utils.local_file_search_by_date(
-                db_name=db,
-                date=date,
-                directory=settings.LOCAL_PATH,
-            )
         case "FILE":
             source_file = Path(source_file)
             if not source_file.exists():
@@ -117,6 +111,13 @@ def cli(
 
             backup_full_path = settings.TMP_BACKUP_DIR / source_file.name
             utils.copy_file(db, src=source_file, dst=backup_full_path)
+
+        case "LOCAL":
+            backup_full_path = utils.local_file_search_by_date(
+                db_name=db,
+                date=date,
+                directory=settings.LOCAL_PATH,
+            )
 
         case "S3":
             backup_full_path = utils.s3_download(db_name=db, date=date)
