@@ -133,7 +133,7 @@ def cli(
         restore_handler.restore(backup_full_path)
 
     except Exception as exc:
-        logger.exception("[%s] BACKUP FAILED: %r", db, exc)
+        logger.exception("[%s] RESTORE FAILED: %r", db, exc)
         sys.exit(2)
 
     utils.remove_file(backup_full_path)
