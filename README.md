@@ -1,93 +1,296 @@
-<h2 align="center">Simple backup databases to local directory and upload S3-storage (optional)</h2>
+<h2 align="center">Simple backup databases to a local directory or S3-storage</h2>
 
-Allows to back up PG and Mysql databases through their client or docker docker-container.
+Allows to backup PG databases via native pgdump (connect to service) or pgdump inside specific docker-container.
 
-## Installation and usage
-### Installation
-*db-backups* requires pipenv
-```shell script
-sudo pip install poetry
-```
+## Installation and usage (docker)
 
-```shell script
-git clone [repository_url] <path_to_project>
-cd <path_to_project>
-poetry install
-
-cp .env.template .env
-nano .env # modify needed variables
-```
-
-### Usage
-
-### Run manually 
-To get started right away (from docker container and upload to YandexDisc):
-```shell script
-cd <path_to_project>
-poetry run backup <DB_NAME> --handler docker_postgres --container postgres --s3
-```
-
-### Run postgres backup via docker (local backup only)
-To store backup on host's directory
-```shell script
-docker-compose up --build
-docker-compose run --volume <YOUR_DIR>:/app/backups backup python -m src.run backup <DB_NAME> --handler postgres --local /app/backups 
-```
-
-### Run postgres backup via docker (s3 backup)
-To run backup process from docker with db-backup service
-```shell script
-docker-compose up --build
-docker-compose run backup python -m src.run backup <DB_NAME> --handler postgres --s3
-```
-
-### Run postgres backup via docker (s3 backup) + encrypt
-To run backup process from docker with db-backup service
+### Pull last version
 ```shell
-echo "ENCRYPT_PASS=<YOUR_SECRET_KEY>" > .env
-docker-compose up --build
-docker-compose run backup python -m src.run backup <DB_NAME> -h postgres -s3 --encrypt --encrypt-pass env:ENCRYPT_PASS
+export DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+git clone [repository_url] "${DB_BACKUPS_TOOL_PATH}"
 ```
+
+### ENV configuration
+```shell
+cd $DB_BACKUPS_TOOL_PATH
+cp .env.template .env
+nano .env  # set required variables
+```
+
+### Run backups
+Preparations (build docker's image locally):
+```shell
+docker build . -t db-backups
+```
+
+Help info:
+```shell
+docker compose run --rm do backup --help
+```
+
+Run backup with copy result on local storage:
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+# or via docker run:
+docker run \
+  --volume ${LOCAL_PATH}:/db-backups/backups \
+  --network "host" \
+  --env-file $(pwd)/.env \
+  --rm \
+  db-backups \
+  backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+```
+
+Run backup with copy result to S3 storage (and encrypt result):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
+
+# NOTE: you need to fill S3_* specific env in .env file before
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+
+# or via docker run:
+docker run \
+  --volume ${LOCAL_PATH}:/db-backups/backups \
+  --network "host" \
+  --env-file $(pwd)/.env \
+  --rm \
+  db-backups \
+  backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+```
+
+### Run restore
+Preparations (build docker's image locally):
+```shell
+docker build . -t db-backups
+```
+
+Help info:
+```shell
+docker compose run --rm do restore --help
+```
+
+Run restore from local / s3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
+docker compose run --rm do restore ${DB_NAME} --from S3 --to PG-SERVICE
+
+# or via docker run:
+docker run \
+  --volume ${LOCAL_PATH}:/db-backups/backups \
+  --network "host" \
+  --env-file $(pwd)/.env \
+  --rm \
+  db-backups \
+  restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
+Run restore from S3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# or via docker run:
+docker run \
+  --volume ${LOCAL_PATH}:/db-backups/backups \
+  --network "host" \
+  --env-file $(pwd)/.env \
+  --rm \
+  db-backups \
+  restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
+## Installation and usage (native run)
+
+### Pull last version
+```shell
+export DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+git clone [repository_url] "${DB_BACKUPS_TOOL_PATH}"
+```
+
+### ENV configuration
+```shell
+cd $DB_BACKUPS_TOOL_PATH
+cp .env.template .env
+nano .env  # set required variables
+```
+
+### Run backups
+
+Help info:
+```shell
+poetry run backup --help
+
+# or via native run
+poetry shell
+python -m run backup --help
+
+```
+
+Run backup with copy result on local storage:
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+poetry run backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+# or via PG-CONTAINER
+poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL
+
+```
+
+Run backup with copy result to S3 storage (and encrypt result):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+ENCRYPT_PASS="<YOUR-ENCRYPT_PASSWORD>"  # replace with your real encrypt password
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
+
+# NOTE: you need to fill S3_* specific env in .env file before
+poetry run backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+
+```
+
+### Run restore
+Preparations (build docker's image locally):
+
+Help info:
+```shell
+poetry run restore --help
+```
+
+Run restore from local / s3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
+poetry run restore ${DB_NAME} --from S3 --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
+Run restore from S3 directory (find file for current day):
+```shell
+DB_BACKUPS_TOOL_PATH="/opt/db-backups"
+DB_NAME="podcast_service"
+CONTAINER_NAME="postgres-12"
+
+LOCAL_PATH=$(pwd)/backups  # path on your host machine
+
+cd $DB_BACKUPS_TOOL_PATH
+echo "LOCAL_PATH=$LOCAL_PATH" >> .env
+
+# find and restore backup file for current day (finding in directory $LOCAL_PATH)
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
+poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+```
+
 
 ### Command line options (backup)
 ```text
-Usage: python -m src.run backup [OPTIONS] DB_NAME
+Usage: backup [OPTIONS] DB_NAME
 
-  Shows file changes in the current working directory.
+  Backups DB from specific container (or service) and uploads it to S3 and/or
+  to the local storage.
 
 Options:
-  -h, --handler BACKUP_HANDLER    Handler, that will be used for backup
-                                  ('mysql', 'postgres', 'docker-postgres')
+  --from BACKUP_HANDLER           Handler, that will be used for backup
+                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
                                   [required]
-  -dc, --docker-container CONTAINER_NAME
+  -c, --container DOCKER_CONTAINER
                                   Name of docker container which should be
-                                  used for getting dump. Required for using
-                                  docker_* handler
+                                  used for getting dump.
+  --to DESTINATION                Comma separated list of destination places
+                                  (result backup file will be moved to).
+                                  Possible values: ('S3', 'LOCAL')  [required]
   -e, --encrypt                   Turn ON backup's encryption (with openssl)
-  --encrypt-pass DB_BACKUP_ENCRYPT_PASS
-                                  Openssl config to provide source of
-                                  encryption pass: ('env:var_name',
-                                  'file:path_name', 'fd:number') | see details
-                                  in README.md  [default:
-                                  env:DB_BACKUP_ENCRYPT_PASS]
-  -s3, --copy-s3                  Send backup to S3-like storage (requires
-                                  DB_BACKUP_S3_* env vars)
-  -l, --copy-local                Store backup locally (requires
-                                  DB_BACKUP_LOCAL_PATH env)
   -v, --verbose                   Enables verbose mode.
   --no-colors                     Disables colorized output.
   --help                          Show this message and exit.
 ```
 
+### Command line options (restore)
+```text
+Usage: restore [OPTIONS] DB_NAME
 
-### ENV configuration
-```shell script
-cd <path_to_project>
-cp .env.template .env
-nano .env  # set required variables
+  Prepares provided file (placed on S3 or local storage) and restore it to
+  specified DB
+
+Options:
+  --from BACKUP_SOURCE            Source of backup file, that will be used for
+                                  downloading/copying: ('S3', 'LOCAL')
+                                  [required]
+  --to RESTORE_HANDLER            Handler, that will be used for restore:
+                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
+                                  [required]
+  -c, --docker-container CONTAINER_NAME
+                                  Name of docker container which should be
+                                  used for getting dump.
+  --date BACKUP_DATE              Specific date (in ISO format: %Y-%m-%d) for
+                                  restoring backup (default: 2024-02-11)
+  -v, --verbose                   Enables verbose mode.
+  --no-colors                     Disables colorized output.
+  --help                          Show this message and exit.
 ```
 
-### RUN configuration (periodical running) 
+## RUN configuration (periodical running) 
 ```shell script
 cd <path_to_project>
 cp run.sh.template run.sh
@@ -97,39 +300,33 @@ crontab -e
 0 2 * * * cd <path_to_project> && /.run.sh >> /var/log/db_backups.cron.log 2>&1 # every night at 02:00
 ```
 
-### Get help
-```shell script
-cd <path_to_project>
-pipenv run python -m src.run backup --help
-```
-
-
-### Environments
+## Environments
 
 Environment variables can be set manually or by updating `<path_to_project>/.env` file. 
 Note, variables from this file can't rewrite variables which are set manually 
 
 
-| ARGUMENT                       |                DESCRIPTION                |         EXAMPLE         |          DEFAULT           |
-|:-------------------------------|:-----------------------------------------:|:-----------------------:|:--------------------------:|
-| DB_BACKUP_LOG_LEVEL            |           Current logging level           |          DEBUG          |            INFO            |    
-| DB_BACKUP_LOG_DIR              |      Default directory for log files      |     /home/user/logs     |  <path_to_project>/logs/   |
-| DB_BACKUP_SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                            |
-| DB_BACKUP_MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |         localhost          |
-| DB_BACKUP_MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |            3306            |
-| DB_BACKUP_MYSQL_USER           | It is used for connecting to MySQL server |          user           |            root            |
-| DB_BACKUP_MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |          password          |
-| DB_BACKUP_PG_HOST              |  It is used for connecting to PG server   |        localhost        |         localhost          |
-| DB_BACKUP_PG_PORT              |  It is used for connecting to PG server   |          5432           |            5432            |
-| DB_BACKUP_PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |          pg_dump           |
-| DB_BACKUP_PG_USER              |  It is used for connecting to PG server   |          user           |          postgres          |
-| DB_BACKUP_PG_PASSWORD          |  It is used for connecting to PG server   |        password         |          password          |
-| DB_BACKUP_S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                            |
-| DB_BACKUP_S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                            |
-| DB_BACKUP_S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                            |
-| DB_BACKUP_S3_BUCKET_NAME       |                 S3 bucket                 |                         |                            |
-| DB_BACKUP_S3_PATH              |         S3 dir for created backup         |                         |                            |
-| DB_BACKUP_LOCAL_PATH           |          local dir saving backup          |                         |                            |
+| ARGUMENT             |                DESCRIPTION                |         EXAMPLE         |         DEFAULT         |
+|:---------------------|:-----------------------------------------:|:-----------------------:|:-----------------------:|
+| LOG_LEVEL            |           Current logging level           |          DEBUG          |          INFO           |    
+| LOG_DIR              |      Default directory for log files      |     /home/user/logs     | <path_to_project>/logs/ |
+| SENTRY_DSN           |     Sentry DSN (exception streaming)      | 123:456@setry.site.ru/1 |                         |
+| MYSQL_HOST           | It is used for connecting to MySQL server |        localhost        |        localhost        |
+| MYSQL_PORT           | It is used for connecting to MySQL server |          3306           |          3306           |
+| MYSQL_USER           | It is used for connecting to MySQL server |          user           |          root           |
+| MYSQL_PASSWORD       | It is used for connecting to MySQL server |        password         |        password         |
+| PG_HOST              |  It is used for connecting to PG server   |        localhost        |        localhost        |
+| PG_PORT              |  It is used for connecting to PG server   |          5432           |          5432           |
+| PG_DUMP_BIN          |   'pg_dump' or link to pg_dump's binary   |         pg_dump         |         pg_dump         |
+| PG_USER              |  It is used for connecting to PG server   |          user           |        postgres         |
+| PG_PASSWORD          |  It is used for connecting to PG server   |        password         |        password         |
+| S3_STORAGE_URL       |        URL to S3-like file storage        | https://storage.s3.net/ |                         |
+| S3_ACCESS_KEY_ID     |         Public key to S3 storage          |                         |                         |
+| S3_SECRET_ACCESS_KEY |         Secret key to S3 storage          |                         |                         |
+| S3_BUCKET_NAME       |                 S3 bucket                 |                         |                         |
+| S3_PATH              |         S3 dir for created backup         |                         |                         |
+| LOCAL_PATH           |          local dir saving backup          |                         |                         |
+| ENV_FILE             |             path to .env file             |                         |          .env           |
 
 * * *
 

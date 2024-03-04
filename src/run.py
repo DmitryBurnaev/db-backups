@@ -14,7 +14,6 @@ from typing import Callable, Optional
 
 import click
 import sentry_sdk
-from dotenv import load_dotenv, find_dotenv
 
 from src import settings
 
@@ -24,7 +23,6 @@ if typing.TYPE_CHECKING:
 logging.config.dictConfig(settings.LOGGING)
 logger = logging.getLogger(__name__)
 logger_ctx: ContextVar["LoggerContext"] = ContextVar("logger_ctx")
-load_dotenv(find_dotenv())
 
 if settings.SENTRY_DSN:
     sentry_sdk.init(settings.SENTRY_DSN)
@@ -34,7 +32,7 @@ class ComplexCLI(click.Group):
     cmd_folder = settings.SRC_DIR / "commands"
 
     def list_commands(self, ctx: click.Context):
-        """ Reads subdirectory 'commands' and adds them to the commands list """
+        """Reads subdirectory 'commands' and adds them to the commands list"""
         rv = []
         for filename in os.listdir(self.cmd_folder):
             if filename.endswith(".py") and not filename.startswith("__"):

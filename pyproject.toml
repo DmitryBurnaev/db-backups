@@ -20,6 +20,7 @@ Flake8-pyproject = "^1.2.0"
 
 [tool.poetry.scripts]
 backup = "src.commands.backup:cli"
+restore = "src.commands.restore:cli"
 
 [build-system]
 requires = ["poetry-core"]

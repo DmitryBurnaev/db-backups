@@ -4,49 +4,55 @@ from functools import partial
 import click
 
 from src import utils, settings
-from src.handlers import HANDLERS
-from src.constants import ENCRYPTION_PASS
+from src.handlers import HANDLERS, BaseHandler, HANDLERS_HUMAN_READABLE
+from src.constants import BACKUP_LOCATIONS, BackupLocation, BackupHandler
 from src.run import logger_ctx
-from src.utils import LoggerContext, validate_envar_option
+from src.utils import LoggerContext, split_option_values
 
-ENV_VARS_REQUIRES = {
-    "s3": (
-        "DB_BACKUP_S3_REGION_NAME",
-        "DB_BACKUP_S3_STORAGE_URL",
-        "DB_BACKUP_S3_ACCESS_KEY_ID",
-        "DB_BACKUP_S3_SECRET_ACCESS_KEY",
-        "DB_BACKUP_S3_BUCKET_NAME",
-        "DB_BACKUP_S3_PATH",
-    ),
-    "local": ("DB_BACKUP_LOCAL_PATH",),
-    "encrypt": ("DB_BACKUP_LOCAL_PATH",),
-}
 module_logger = logging.getLogger("backup")
 
 
 @click.command("backup", short_help="Backup DB to chosen storage (S3-like, local)")
 @click.argument(
-    "db",
+    "DB",
     metavar="DB_NAME",
     type=str,
 )
 @click.option(
-    "--handler",
+    "--from",
+    "backup_handler",
     metavar="BACKUP_HANDLER",
     required=True,
-    show_choices=HANDLERS.keys(),
-    type=click.Choice(list(HANDLERS.keys())),
-    help=f"Handler, that will be used for backup {tuple(HANDLERS.keys())}",
+    show_choices=HANDLERS_HUMAN_READABLE,
+    type=click.Choice(HANDLERS_HUMAN_READABLE),
+    help=f"Handler, that will be used for backup",
 )
 @click.option(
-    "-dc",
+    "-c",
     "--docker-container",
-    metavar="CONTAINER_NAME",
+    metavar="DOCKER_CONTAINER",
     type=str,
-    help="""
-        Name of docker container which should be used for getting dump.
-        Required for using docker_* handler
-    """,
+    help="Name of docker container which should be used for getting dump.",
+)
+@click.option(
+    "--to",
+    "destination",
+    metavar="DESTINATION",
+    required=True,
+    type=str,
+    help=(
+        f"Comma separated list of destination places (result backup file will be moved to). "
+        f"Possible values: {BACKUP_LOCATIONS}"
+    ),
+    callback=partial(split_option_values, result_type=BackupLocation),
+)
+@click.option(
+    "-f",
+    "--file",
+    "destination_file",
+    metavar="LOCAL_FILE",
+    type=str,
+    help="Path to the local file for saving backup (required param for DESTINATION=LOCAL_FILE).",
 )
 @click.option(
     "-e",
@@ -54,73 +60,56 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
-# @click.option(
-#     "--encrypt-pass",
-#     type=str,
-#     metavar="DB_BACKUP_ENCRYPT_PASS",
-#     default="env:DB_BACKUP_ENCRYPT_PASS",
-#     show_default=True,
-#     help=f"""
-#         Openssl config to provide source of encryption pass: {tuple(ENCRYPTION_PASS.keys())} |
-#         see details in README.md
-#     """,
-# )
-@click.option(
-    "-s3",
-    "--copy-s3",
-    is_flag=True,
-    help="Send backup to S3-like storage (requires DB_BACKUP_S3_* env vars)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["s3"]),
-)
-@click.option(
-    "-l",
-    "--copy-local",
-    is_flag=True,
-    help="Store backup locally (requires DB_BACKUP_LOCAL_PATH env)",
-    callback=partial(validate_envar_option, required_vars=ENV_VARS_REQUIRES["local"]),
-)
+# TODO: provide env-file path
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
-    handler: str,
     db: str,
+    backup_handler: BackupHandler,
     docker_container: str | None,
     encrypt: bool,
-    encrypt_pass: str | None,
-    copy_s3: bool,
-    copy_local: bool,
+    destination: tuple[BackupLocation, ...],
+    destination_file: str | None,
     verbose: bool,
     no_colors: bool,
 ):
-    """Shows file changes in the current working directory."""
+    """
+    Backups DB from specific container (or service)
+    and uploads it to S3 and/or to the local storage.
+    """
+
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
 
-    if "docker" in handler and not docker_container:
-        logger.critical("Using handler '%s' requires '--docker-container' argument", handler)
+    if backup_handler == BackupHandler.PG_CONTAINER and not docker_container:
+        logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
+        exit(1)
+
+    if BackupLocation.FILE in destination and not destination_file:
+        logger.critical("Using destination 'FILE' requires '--file' argument")
         exit(1)
 
     try:
-        backup_handler = HANDLERS[handler](db, container_name=docker_container, logger=logger)
+        handler = HANDLERS[backup_handler]
+        backup_handler: BaseHandler = handler(db, container_name=docker_container, logger=logger)
     except KeyError:
-        logger.critical("Unknown handler '%s'", handler)
+        logger.critical("Unknown handler '%s'", backup_handler)
         exit(1)
 
     try:
-        backup_full_path = backup_handler()
+        backup_full_path = backup_handler.backup()
 
         if encrypt:
-            backup_full_path = utils.encrypt_file(
-                db_name=db,
-                file_path=backup_full_path,
-                encrypt_pass=encrypt_pass,
-            )
+            backup_full_path = utils.encrypt_file(db_name=db, file_path=backup_full_path)
 
-        if copy_local:
+        if BackupLocation.LOCAL in destination:
             utils.copy_file(db_name=db, src=backup_full_path, dst=settings.LOCAL_PATH)
 
-        if copy_s3:
-            utils.upload_to_s3(db_name=db, backup_path=backup_full_path)
+        if BackupLocation.FILE in destination:
+            utils.copy_file(db_name=db, src=backup_full_path, dst=destination_file)
+
+        if BackupLocation.S3 in destination:
+            utils.s3_upload(db_name=db, backup_path=backup_full_path)
 
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
