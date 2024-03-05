@@ -34,6 +34,7 @@ DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
+LOCAL_FILE=$(pwd)/backups/2024-03-05-175354.podcast_service.postgres-backup.tar.gz
 
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
@@ -47,6 +48,9 @@ docker run \
   --rm \
   db-backups \
   backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+
+# or copy to local file
+docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to FILE --file ${LOCAL_FILE}
 ```
 
 Run backup with copy result to S3 storage (and encrypt result):
@@ -89,12 +93,15 @@ DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
-
+LOCAL_FILE=$(pwd)/backups/2024-03-05-175354.podcast_service.postgres-backup.tar.gz
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 # find and restore backup file for current day (finding in directory $LOCAL_PATH)
 docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+
+# find and restore backup file from specific file
+docker compose run --rm do restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG-SERVICE
 
 # restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
 docker compose run --rm do restore ${DB_NAME} --from S3 --to PG-SERVICE
@@ -210,6 +217,7 @@ DB_BACKUPS_TOOL_PATH="/opt/db-backups"
 DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
+LOCAL_FILE=$(pwd)/backups/2024-03-05-175354.podcast_service.postgres-backup.tar.gz
 
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
@@ -222,6 +230,10 @@ poetry run restore ${DB_NAME} --from S3 --to PG-SERVICE
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
 poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+
+# find and restore backup file from specific file
+poetry run restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG-SERVICE
+
 ```
 
 Run restore from S3 directory (find file for current day):
