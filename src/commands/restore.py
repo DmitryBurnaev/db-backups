@@ -40,7 +40,7 @@ module_logger = logging.getLogger("backup")
     "source_file",
     metavar="LOCAL_FILE",
     type=str,
-    help="Path to the local file to restore (required param for DESTINATION=LOCAL_FILE).",
+    help="Path to the local file to restore (required param for DESTINATION=FILE).",
 )
 @click.option(
     "--to",

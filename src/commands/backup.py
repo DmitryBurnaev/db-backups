@@ -52,7 +52,7 @@ module_logger = logging.getLogger("backup")
     "destination_file",
     metavar="LOCAL_FILE",
     type=str,
-    help="Path to the local file for saving backup (required param for DESTINATION=LOCAL_FILE).",
+    help="Path to the local file for saving backup (required param for DESTINATION=FILE).",
 )
 @click.option(
     "-e",

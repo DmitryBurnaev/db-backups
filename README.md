@@ -264,18 +264,21 @@ Usage: backup [OPTIONS] DB_NAME
 
 Options:
   --from BACKUP_HANDLER           Handler, that will be used for backup
-                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
                                   [required]
-  -c, --container DOCKER_CONTAINER
+  -c, --docker-container DOCKER_CONTAINER
                                   Name of docker container which should be
                                   used for getting dump.
   --to DESTINATION                Comma separated list of destination places
                                   (result backup file will be moved to).
-                                  Possible values: ('S3', 'LOCAL')  [required]
+                                  Possible values: ('S3', 'LOCAL', 'FILE')
+                                  [required]
+  -f, --file LOCAL_FILE           Path to the local file for saving backup
+                                  (required param for DESTINATION=FILE).
   -e, --encrypt                   Turn ON backup's encryption (with openssl)
   -v, --verbose                   Enables verbose mode.
   --no-colors                     Disables colorized output.
   --help                          Show this message and exit.
+
 ```
 
 ### Command line options (restore)
@@ -287,19 +290,24 @@ Usage: restore [OPTIONS] DB_NAME
 
 Options:
   --from BACKUP_SOURCE            Source of backup file, that will be used for
-                                  downloading/copying: ('S3', 'LOCAL')
+                                  downloading/copying: ('S3', 'LOCAL', 'FILE')
                                   [required]
+  -f, --file LOCAL_FILE           Path to the local file to restore (required
+                                  param for DESTINATION=FILE).
   --to RESTORE_HANDLER            Handler, that will be used for restore:
-                                  ('MYSQL', 'PG-SERVICE', 'PG-CONTAINER')
-                                  [required]
+                                  (<BackupHandler.MYSQL: 'MYSQL'>,
+                                  <BackupHandler.PG_SERVICE: 'PG-SERVICE'>,
+                                  <BackupHandler.PG_CONTAINER: 'PG-
+                                  CONTAINER'>)  [required]
   -c, --docker-container CONTAINER_NAME
                                   Name of docker container which should be
                                   used for getting dump.
   --date BACKUP_DATE              Specific date (in ISO format: %Y-%m-%d) for
-                                  restoring backup (default: 2024-02-11)
+                                  restoring backup (default: 2024-03-06)
   -v, --verbose                   Enables verbose mode.
   --no-colors                     Disables colorized output.
   --help                          Show this message and exit.
+
 ```
 
 ## RUN configuration (periodical running) 
