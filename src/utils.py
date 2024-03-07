@@ -1,5 +1,4 @@
 import dataclasses
-import glob
 import os
 import logging
 import re
@@ -10,7 +9,6 @@ from datetime import datetime
 from enum import StrEnum
 from operator import itemgetter
 from pathlib import Path
-import tempfile
 from typing import ClassVar, TypeVar, Type
 from urllib.parse import urljoin
 
@@ -92,23 +90,25 @@ def s3_download(db_name: str, date: datetime.date) -> Path:
     session.get_available_resources()
     try:
         prefix = date.strftime("%Y-%m-%d")
-        list_objects = s3.list_objects_v2(Bucket=settings.S3_BUCKET_NAME, prefix=prefix)
-        objects = sorted(list_objects["Contents"], key=itemgetter("Key"), reverse=True)
+        list_objects = s3.list_objects_v2(
+            Bucket=settings.S3_BUCKET_NAME,
+            Prefix=f"{settings.S3_PATH}/{prefix}",
+        )
+        objects = sorted(list_objects.get("Contents"), key=itemgetter("Key"), reverse=True)
         if not objects:
             raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
 
-        file_name = objects[0]["Key"]
-        result_path = settings.TMP_BACKUP_DIR / file_name
+        s3_file_name = objects[0]["Key"]
+        result_path = settings.TMP_BACKUP_DIR / s3_file_name.replace(f"{settings.S3_PATH}/", "")
         logger.debug(
-            "Executing request (download) from S3: %s/%s -> %s",
-            settings.S3_PATH,
-            file_name,
+            "[%s] Executing request (download) from S3: %s -> %s",
+            db_name,
+            s3_file_name,
             result_path,
         )
-        # TODO: recheck downloading logic
         s3.download_file(
             Bucket=settings.S3_BUCKET_NAME,
-            Object=settings.S3_PATH / file_name,
+            Key=s3_file_name,
             Filename=result_path,
         )
 
@@ -158,7 +158,7 @@ def get_filename(db_name: str, suffix: str = "") -> str:
     return f"{now_time}.{db_name}.backup{suffix}"
 
 
-def get_latest_file_by_mask(db_name: str, directory: Path, mask: str) -> Path | None:
+def get_latest_file(db_name: str, directory: Path, mask: str) -> Path | None:
     """Get latest file by mask in specified directory (ex.: find last *.sql file in dir)"""
     logger = logger_ctx.get(module_logger)
     try:
@@ -174,7 +174,7 @@ def get_latest_file_by_mask(db_name: str, directory: Path, mask: str) -> Path | 
         mask,
         directory,
     )
-    return None
+    return found_file
 
 
 def _check_encrypt_vars(function):

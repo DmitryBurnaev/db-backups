@@ -1,6 +1,7 @@
 """
 Defines run logic for restore handlers
 """
+
 import sys
 import datetime
 import logging
@@ -109,8 +110,8 @@ def cli(
             if not source_file.exists():
                 raise click.FileError("Source file does not exist")
 
+            utils.copy_file(db, src=source_file, dst=settings.TMP_BACKUP_DIR)
             backup_full_path = settings.TMP_BACKUP_DIR / source_file.name
-            utils.copy_file(db, src=source_file, dst=backup_full_path)
 
         case "LOCAL":
             backup_full_path = utils.local_file_search_by_date(

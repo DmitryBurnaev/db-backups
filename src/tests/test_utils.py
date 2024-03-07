@@ -2,7 +2,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from src.utils import get_latest_file_by_mask
+from src.utils import get_latest_file
 
 
 class TestGetLatestFileByMask:
@@ -12,12 +12,12 @@ class TestGetLatestFileByMask:
             file_path = os.path.join(temp_dir, "test.sql")
             with open(file_path, "w") as f:
                 f.write("test")
-            result = get_latest_file_by_mask(Path(temp_dir), "*.sql")
+            result = get_latest_file("test-db", Path(temp_dir), "*.sql")
             assert result == Path(file_path)
 
     # Returns None when the directory does not exist
     def test_returns_none_when_directory_does_not_exist(self):
-        result = get_latest_file_by_mask(Path("nonexistent_dir"), "*.sql")
+        result = get_latest_file("test-db", Path("nonexistent_dir"), "*.sql")
         assert result is None
 
     # Returns the latest file in the directory when there are multiple files matching the mask
@@ -32,7 +32,7 @@ class TestGetLatestFileByMask:
                 f.write("test")
             with open(file3_path, "w") as f:
                 f.write("test")
-            result = get_latest_file_by_mask(Path(temp_dir), "*.sql")
+            result = get_latest_file("test-db", Path(temp_dir), "*.sql")
             assert result == Path(file3_path)
 
     def test_returns_latest_file_with_special_characters_in_file_names(self):
@@ -53,7 +53,7 @@ class TestGetLatestFileByMask:
                 f.write("test")
 
             # Call the function under test
-            result = get_latest_file_by_mask(Path(temp_dir), "*.sql")
+            result = get_latest_file("test-db", Path(temp_dir), "*.sql")
 
             # Assert that the result is the expected file path
             assert result == Path(file3_path)
@@ -63,7 +63,7 @@ class TestGetLatestFileByMask:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Call the function under test
-            result = get_latest_file_by_mask(Path(temp_dir), "*.sql")
+            result = get_latest_file("test-db", Path(temp_dir), "*.sql")
 
             # Assert that the result is None
             assert result is None
@@ -73,7 +73,7 @@ class TestGetLatestFileByMask:
         # Create a temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Call the function under test
-            result = get_latest_file_by_mask(Path(temp_dir), "*.sql")
+            result = get_latest_file("test-db", Path(temp_dir), "*.sql")
 
             # Assert that the result is None
             assert result is None

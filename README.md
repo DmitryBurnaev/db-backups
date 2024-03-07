@@ -39,7 +39,7 @@ LOCAL_FILE=$(pwd)/backups/2024-03-05-175354.podcast_service.postgres-backup.tar.
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
-docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+docker compose run --rm do backup ${DB_NAME} --from PG --to LOCAL
 # or via docker run:
 docker run \
   --volume ${LOCAL_PATH}:/db-backups/backups \
@@ -47,10 +47,10 @@ docker run \
   --env-file $(pwd)/.env \
   --rm \
   db-backups \
-  backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+  backup ${DB_NAME} --from PG --to LOCAL
 
 # or copy to local file
-docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to FILE --file ${LOCAL_FILE}
+docker compose run --rm do backup ${DB_NAME} --from PG --to FILE --file ${LOCAL_FILE}
 ```
 
 Run backup with copy result to S3 storage (and encrypt result):
@@ -64,7 +64,7 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
 
 # NOTE: you need to fill S3_* specific env in .env file before
-docker compose run --rm do backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+docker compose run --rm do backup ${DB_NAME} --from PG --to S3 --encrypt
 
 # or via docker run:
 docker run \
@@ -73,7 +73,7 @@ docker run \
   --env-file $(pwd)/.env \
   --rm \
   db-backups \
-  backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+  backup ${DB_NAME} --from PG --to S3 --encrypt
 ```
 
 ### Run restore
@@ -98,13 +98,13 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 # find and restore backup file for current day (finding in directory $LOCAL_PATH)
-docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG
 
 # find and restore backup file from specific file
-docker compose run --rm do restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG-SERVICE
+docker compose run --rm do restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG
 
 # restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
-docker compose run --rm do restore ${DB_NAME} --from S3 --to PG-SERVICE
+docker compose run --rm do restore ${DB_NAME} --from S3 --to PG
 
 # or via docker run:
 docker run \
@@ -113,10 +113,10 @@ docker run \
   --env-file $(pwd)/.env \
   --rm \
   db-backups \
-  restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+  restore ${DB_NAME} --from LOCAL --to PG
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
-docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG --date 2024-02-21
 ```
 
 Run restore from S3 directory (find file for current day):
@@ -131,7 +131,7 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 # find and restore backup file for current day (finding in directory $LOCAL_PATH)
-docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG
 
 # or via docker run:
 docker run \
@@ -140,10 +140,10 @@ docker run \
   --env-file $(pwd)/.env \
   --rm \
   db-backups \
-  restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+  restore ${DB_NAME} --from LOCAL --to PG
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
-docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+docker compose run --rm do restore ${DB_NAME} --from LOCAL --to PG --date 2024-02-21
 ```
 
 ## Installation and usage (native run)
@@ -183,7 +183,7 @@ LOCAL_PATH=$(pwd)/backups  # path on your host machine
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
-poetry run backup ${DB_NAME} --from PG-SERVICE --to LOCAL
+poetry run backup ${DB_NAME} --from PG --to LOCAL
 # or via PG-CONTAINER
 poetry run backup ${DB_NAME} --from PG-CONTAINER -c ${CONTAINER_NAME} --to LOCAL
 
@@ -199,7 +199,7 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "ENCRYPT_PASS=$ENCRYPT_PASS" >> .env
 
 # NOTE: you need to fill S3_* specific env in .env file before
-poetry run backup ${DB_NAME} --from PG-SERVICE --to S3 --encrypt
+poetry run backup ${DB_NAME} --from PG --to S3 --encrypt
 
 ```
 
@@ -223,16 +223,16 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 # find and restore backup file for current day (finding in directory $LOCAL_PATH)
-poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+poetry run restore ${DB_NAME} --from LOCAL --to PG
 
 # restore backup file placed on S3 bucket (fill S3_* specific env in .env file)
-poetry run restore ${DB_NAME} --from S3 --to PG-SERVICE
+poetry run restore ${DB_NAME} --from S3 --to PG
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
-poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+poetry run restore ${DB_NAME} --from LOCAL --to PG --date 2024-02-21
 
 # find and restore backup file from specific file
-poetry run restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG-SERVICE
+poetry run restore ${DB_NAME} --from FILE --file ${LOCAL_FILE} --to PG
 
 ```
 
@@ -248,10 +248,10 @@ cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
 
 # find and restore backup file for current day (finding in directory $LOCAL_PATH)
-poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE
+poetry run restore ${DB_NAME} --from LOCAL --to PG
 
 # find for specific day (filename is formatted like: '2024-02-21-065213.${DB_NAME}.backup.tar.gz')
-poetry run restore ${DB_NAME} --from LOCAL --to PG-SERVICE --date 2024-02-21
+poetry run restore ${DB_NAME} --from LOCAL --to PG --date 2024-02-21
 ```
 
 
@@ -296,7 +296,7 @@ Options:
                                   param for DESTINATION=FILE).
   --to RESTORE_HANDLER            Handler, that will be used for restore:
                                   (<BackupHandler.MYSQL: 'MYSQL'>,
-                                  <BackupHandler.PG_SERVICE: 'PG-SERVICE'>,
+                                  <BackupHandler.PG_SERVICE: 'PG'>,
                                   <BackupHandler.PG_CONTAINER: 'PG-
                                   CONTAINER'>)  [required]
   -c, --docker-container CONTAINER_NAME
