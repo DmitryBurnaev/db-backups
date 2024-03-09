@@ -15,7 +15,7 @@ from src.utils import (
     BackupError,
     get_filename,
     RestoreBackupError,
-    get_latest_file_by_mask,
+    get_latest_file,
 )
 
 module_logger = logging.getLogger(__name__)
@@ -70,12 +70,10 @@ class BaseHandler(ABC):
         self._do_clean()
 
     @abc.abstractmethod
-    def _do_backup(self) -> str:
-        ...
+    def _do_backup(self) -> str: ...
 
     @abc.abstractmethod
-    def _do_restore(self, file_path: Path) -> None:
-        ...
+    def _do_restore(self, file_path: Path) -> None: ...
 
     def _do_zip(self) -> str:
         parent_dir, file_name = self.backup_path.parent, self.backup_path.name
@@ -96,7 +94,7 @@ class BaseHandler(ABC):
         current_tmp_dir = compressed_backup_path.parent
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
 
-        if not (result_file := get_latest_file_by_mask(current_tmp_dir, mask="*.sql")):
+        if not (result_file := get_latest_file(self.db_name, current_tmp_dir, mask="*.sql")):
             raise RestoreBackupError(f"Backup archive doesn't contain any .sql files")
 
         return result_file

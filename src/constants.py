@@ -9,8 +9,8 @@ class BackupLocation(StrEnum):
 
 class BackupHandler(StrEnum):
     MYSQL = "MYSQL"
-    PG_SERVICE = "PG-SERVICE"
-    PG_CONTAINER = "PG-CONTAINER"
+    PG_SERVICE = "PG"
+    PG_CONTAINER = "PG_CONTAINER"
 
 
 ENV_VARS_REQUIRES = {
