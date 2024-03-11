@@ -1,13 +1,16 @@
 #!/bin/sh
 DB_NAME="my_db"
 # run backup with local interpreter (and upload to S3)
-python -m src.run backup "$DB_NAME" --from PG-CONTAINER --container postgres --to S3
+#python -m src.run backup "$DB_NAME" --from PG-CONTAINER --container postgres --to S3
 
+# build container's image
+docker build . -t db-backups
 
+# run via compose (using docker-compose.yaml in current directory and .env file for envs)
+docker compose run --rm do backup ${DB_NAME} --from PG --to S3 --encrypt --verbose
 
 # run via docker (and upload to S3)
-docker build . -t db-backups
-docker run \
-  backup "$DB_NAME" --FROM PG-SERVICE --to S3 \
-  --rm \
-  db-backups
+#docker run \
+#  backup "$DB_NAME" --FROM PG-CONTAINER --CONTAINER postgres --to S3 \
+#  --rm \
+#  db-backups
