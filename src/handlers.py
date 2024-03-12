@@ -70,10 +70,12 @@ class BaseHandler(ABC):
         self._do_clean()
 
     @abc.abstractmethod
-    def _do_backup(self) -> str: ...
+    def _do_backup(self) -> str:
+        ...
 
     @abc.abstractmethod
-    def _do_restore(self, file_path: Path) -> None: ...
+    def _do_restore(self, file_path: Path) -> None:
+        ...
 
     def _do_zip(self) -> str:
         parent_dir, file_name = self.backup_path.parent, self.backup_path.name
