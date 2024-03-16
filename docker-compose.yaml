@@ -9,5 +9,5 @@ services:
       - .env
     volumes:
       - ${LOCAL_PATH}:/db-backups/backups
-      - $(pwd)/logs:/db-backups/backups:rw
+      - ${LOG_PATH}:/db-backups/logs:rw
     network_mode: "host"

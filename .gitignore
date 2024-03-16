@@ -2,8 +2,7 @@
 __pycache__/
 *.py[cod]
 venv/
-log/
-logs/
+log*
 backups/
 .env*
 run.sh

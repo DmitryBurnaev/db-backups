@@ -80,6 +80,7 @@ def cli(
 
     logger = LoggerContext(verbose=verbose, skip_colors=no_colors, logger=module_logger)
     logger_ctx.set(logger)
+    logger.info("[%s] BACKUP STARTING ...", db)
 
     if backup_handler == BackupHandler.PG_CONTAINER and not docker_container:
         logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
