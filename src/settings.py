@@ -47,7 +47,7 @@ LOGGING = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": LOG_LEVEL,
             "formatter": "simple",
-            "filename": os.path.join(LOG_DIR, "db_backups.log"),
+            "filename": LOG_DIR / "db_backups.log",
             "maxBytes": 10485760,
             "backupCount": 20,
             "encoding": "utf8",

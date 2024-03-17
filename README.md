@@ -35,6 +35,7 @@ DB_NAME="podcast_service"
 CONTAINER_NAME="postgres-12"
 LOCAL_PATH=$(pwd)/backups  # path on your host machine
 LOCAL_FILE=$(pwd)/backups/2024-03-05-175354.podcast_service.postgres-backup.tar.gz
+LOG_PATH=$(pwd)/logs
 
 cd $DB_BACKUPS_TOOL_PATH
 echo "LOCAL_PATH=$LOCAL_PATH" >> .env
@@ -43,6 +44,7 @@ docker compose run --rm do backup ${DB_NAME} --from PG --to LOCAL
 # or via docker run:
 docker run \
   --volume ${LOCAL_PATH}:/db-backups/backups \
+  --volume ${LOG_PATH}:/db-backups/logs \
   --network "host" \
   --env-file $(pwd)/.env \
   --rm \
