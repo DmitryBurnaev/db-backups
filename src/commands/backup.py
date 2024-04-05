@@ -1,3 +1,9 @@
+"""
+cli's logic for 
+> run backup ...
+
+"""
+import sys
 import logging
 from functools import partial
 
@@ -25,7 +31,7 @@ module_logger = logging.getLogger("backup")
     required=True,
     show_choices=HANDLERS_HUMAN_READABLE,
     type=click.Choice(HANDLERS_HUMAN_READABLE),
-    help=f"Handler, that will be used for backup",
+    help="Handler, that will be used for backup",
 )
 @click.option(
     "-c",
@@ -60,7 +66,6 @@ module_logger = logging.getLogger("backup")
     is_flag=True,
     help="Turn ON backup's encryption (with openssl)",
 )
-# TODO: provide env-file path
 @click.option("-v", "--verbose", is_flag=True, flag_value=True, help="Enables verbose mode.")
 @click.option("--no-colors", is_flag=True, help="Disables colorized output.")
 def cli(
@@ -84,18 +89,18 @@ def cli(
 
     if backup_handler == BackupHandler.PG_CONTAINER and not docker_container:
         logger.critical("Using handler '%s' requires '--docker-container' argument", backup_handler)
-        exit(1)
+        sys.exit(1)
 
     if BackupLocation.FILE in destination and not destination_file:
         logger.critical("Using destination 'FILE' requires '--file' argument")
-        exit(1)
+        sys.exit(1)
 
     try:
         handler = HANDLERS[backup_handler]
         backup_handler: BaseHandler = handler(db, container_name=docker_container, logger=logger)
     except KeyError:
         logger.critical("Unknown handler '%s'", backup_handler)
-        exit(1)
+        sys.exit(1)
 
     try:
         backup_full_path = backup_handler.backup()
@@ -112,9 +117,10 @@ def cli(
         if BackupLocation.S3 in destination:
             utils.s3_upload(db_name=db, backup_path=backup_full_path)
 
+    # pylint: disable=broad-exception-caught
     except Exception as exc:
         logger.exception("[%s] BACKUP FAILED\n %r", db, exc)
-        exit(2)
+        sys.exit(2)
 
     utils.remove_file(backup_full_path)
     logger.info("[%s] BACKUP SUCCESS", db)

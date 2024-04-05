@@ -1,10 +1,14 @@
-import dataclasses
+""" 
+Common utils for the backup/restore logic
+"""
+
 import os
-import logging
 import re
-import shutil
-import subprocess
 import sys
+import shutil
+import logging
+import subprocess
+import dataclasses
 from datetime import datetime
 from enum import StrEnum
 from operator import itemgetter
@@ -26,6 +30,8 @@ T = TypeVar("T")
 
 
 class BackupError(Exception):
+    """ Simple exception for specifying backup's error """
+
     def __init__(self, message: str):
         super().__init__()
         self.message = message
@@ -94,7 +100,8 @@ def s3_download(db_name: str, date: datetime.date) -> Path:
             Bucket=settings.S3_BUCKET_NAME,
             Prefix=f"{settings.S3_PATH}/{prefix}",
         )
-        objects = sorted(list_objects.get("Contents"), key=itemgetter("Key"), reverse=True)
+        found_files = list_objects.get("Contents") or []
+        objects = sorted(found_files, key=itemgetter("Key"), reverse=True)
         if not objects:
             raise RestoreBackupError(f"No objects in S3 bucket for requested prefix {prefix}")
 
@@ -220,6 +227,8 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
 
 
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
+    """ Detects: whic env-variables are missing in the env (and raise specific error if needed) """
+
     missed_variables = []
     for variable in env_variables:
         if not any((os.getenv(variable), getattr(settings, variable, None))):
@@ -233,6 +242,13 @@ def check_env_variables(*env_variables, raise_exception: bool = True) -> list[st
 
 
 def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
+    """ 
+    Simple copying file from src -> dst 
+    
+    :param db_name: current DB (needed for correct logging process)
+    :param src: target path
+    :param dst: destination path
+    """
     if not dst:
         raise BackupError("Couldn't copy backup: destination path cannot be empty")
 
@@ -248,7 +264,7 @@ def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
     try:
         call_with_logging(f"cp {src} {dest_dir}")
     except Exception as exc:
-        raise BackupError(f"Couldn't copy backup from {src} to '{dest_dir}': {exc!r}")
+        raise BackupError(f"Couldn't copy backup from {src} to '{dest_dir}': {exc!r}") from exc
 
     result_file = dest_dir / src.name
     if not result_file.exists():
@@ -258,6 +274,14 @@ def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
 
 
 def remove_file(file_path: Path):
+    """
+    Remove a file.
+
+    This function removes a file at the specified file path. If the file cannot be removed, a warning message is logged.
+
+    :param file_path: The path to the file to be removed.
+    :type file_path: Path
+    """
     logger = logger_ctx.get(module_logger)
     try:
         call_with_logging(f"rm {file_path}")
@@ -345,6 +369,26 @@ class LoggerContext:
 def validate_envar_option(
     _, param: click.Option, value: T, required_vars: list[str] | None = None
 ) -> T:
+    """
+    This function is used as a callback for validating the value of an environment variable 
+    option in a Click command. 
+    It checks if the specified environment variables are set and raises a click.UsageError 
+    if any of them are missing.
+
+    Parameters:
+    - _: Placeholder for the command line context (not used).
+    - param: The click.Option object representing the option being validated.
+    - value: The value of the option being validated.
+    - required_vars: A list of environment variable names that are required for the option. 
+        Defaults to None.
+
+    Returns:
+    - The validated value of the option.
+
+    Raises:
+    - click.UsageError: If any of the required environment variables are missing.
+
+    """    
     required_vars = required_vars or ENV_VARS_REQUIRES.get(value, [])
     if value and (missed_vars := check_env_variables(*required_vars, raise_exception=False)):
         raise click.UsageError(
