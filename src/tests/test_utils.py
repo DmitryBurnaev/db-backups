@@ -49,7 +49,6 @@ class TestGetLatestFileByMask:
         result = get_latest_file("test-db", temp_dir, "*.sql")
         assert result is None
 
-    # Returns None when the directory is empty
     def test_returns_none_when_directory_is_empty(self, temp_dir):
         result = get_latest_file("test-db", temp_dir, "*.sql")
         assert result is None

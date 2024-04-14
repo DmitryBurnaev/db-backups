@@ -1,7 +1,6 @@
 """
-cli's logic for 
+cli's logic for
 > run backup ...
-
 """
 import sys
 import logging

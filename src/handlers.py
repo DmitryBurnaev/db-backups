@@ -1,3 +1,7 @@
+"""
+Base functionality for backup/restore process (with DB-related specific operations)
+"""
+
 import abc
 import logging
 from abc import ABC
@@ -22,8 +26,10 @@ module_logger = logging.getLogger(__name__)
 
 
 class BaseHandler(ABC):
+    """Base class which allows to define logic for debug/restore process"""
+
     service: ClassVar[str] = NotImplemented
-    required_variables: ClassVar[tuple[str]] = NotImplemented
+    required_variables: ClassVar[tuple[str, ...]] = NotImplemented
 
     def __init__(self, db_name: str, **extra_kwargs):
         self.db_name = db_name
@@ -34,6 +40,13 @@ class BaseHandler(ABC):
         self.extra_kwargs = extra_kwargs
 
     def backup(self) -> Path:
+        """
+        Base method for backup process running. Should return path to result backup.
+        Child classes should override callable inside method `self._do_backup` for implementing
+        DB-specific backup process
+
+        :return: path to result backup's file
+        """
         self.logger.info("[%s] handle backup via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         backup_stdout = self._do_backup()
@@ -60,6 +73,16 @@ class BaseHandler(ABC):
         return self.compressed_backup_path
 
     def restore(self, file_path: Path) -> None:
+        """
+        Base method for restore process running. Should get the path to restoring backup.
+        Child classes should override callable inside method `self._do_restore` for implementing
+        DB-specific backup process
+
+        File will be un-arhived, if restoring file is an arhive (trying to detect by file's ext)
+        File will be decrypted, if restoring file was encrypted (trying to detect by file's ext)
+
+        :param file_path: path to restoring backup
+        """
         self.logger.info("[%s] handle restore via %s ... ", self.db_name, self.service)
         check_env_variables(*self.required_variables)
         if not file_path.exists():
@@ -97,7 +120,7 @@ class BaseHandler(ABC):
         call_with_logging(f"tar -zxvf {compressed_backup_path} --directory {current_tmp_dir}")
 
         if not (result_file := get_latest_file(self.db_name, current_tmp_dir, mask="*.sql")):
-            raise RestoreBackupError(f"Backup archive doesn't contain any .sql files")
+            raise RestoreBackupError("Backup archive doesn't contain any .sql files")
 
         return result_file
 
@@ -151,6 +174,7 @@ class PGServiceHandler(BaseHandler):
 
     @property
     def command_kwargs(self):
+        """Overrided ClassVar-parameters in order to access to self-related params"""
         return {
             "pg_dump_bin": settings.PG_DUMP_BIN,
             "host": settings.PG_HOST,
@@ -164,7 +188,7 @@ class PGServiceHandler(BaseHandler):
     def _do_backup(self) -> str:
         backup_command = """
             PGPASSWORD="{password}" {pg_dump_bin} -h{host} -p{port} -U{user} \
-            -d {db_name} -f {backup_path}    
+            -d {db_name} -f {backup_path}
         """
         return call_with_logging(
             command=backup_command.format(**self.command_kwargs),
@@ -188,7 +212,7 @@ class PGServiceHandler(BaseHandler):
     def _check_db_exists(self):
         self.logger.debug("[%s] check DB exists...", self.db_name)
         command = """
-            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -l | grep {db_name}   
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} -l | grep {db_name}
         """
         result = call_with_logging(
             command.format(**self.command_kwargs),
@@ -203,7 +227,7 @@ class PGServiceHandler(BaseHandler):
         self.logger.info("[%s] Removing existing DB...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
-            -c "DROP DATABASE IF EXISTS {db_name}"  
+            -c "DROP DATABASE IF EXISTS {db_name}"
         """
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
@@ -211,17 +235,16 @@ class PGServiceHandler(BaseHandler):
         self.logger.info("[%s] Creating new DB...", self.db_name)
         command = """
             PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} \
-            -c "CREATE DATABASE {db_name}"  
+            -c "CREATE DATABASE {db_name}"
         """
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
 
     def _restore_db(self):
         self.logger.info("[%s] Restoring DB...", self.db_name)
         command = """
-            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}  
+            PGPASSWORD="{password}" psql -h{host} -p{port} -U{user} {db_name} < {backup_path}
         """
         call_with_logging(command.format(**self.command_kwargs), password_prefix="PGPASSWORD=")
-        # TODO: check restore error for case: DEBUG: /bin/sh: /var/folders/nh/s3hkf57573953klldrl1nmq40000gn/T/tmpx_fjoun7/v_server_dev410.backup.sql: No such file or directory
 
 
 class PGDockerHandler(BaseHandler):

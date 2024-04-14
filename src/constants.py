@@ -1,13 +1,21 @@
+""" Simple constants for db-specific operations """
 from enum import StrEnum
 
 
 class BackupLocation(StrEnum):
+    """Various places for backup's location"""
+
     S3 = "S3"
     LOCAL = "LOCAL"
     FILE = "FILE"
 
 
 class BackupHandler(StrEnum):
+    """
+    Helps to navigate - which logic should be called for
+    backup/restore process
+    """
+
     MYSQL = "MYSQL"
     PG_SERVICE = "PG"
     PG_CONTAINER = "PG_CONTAINER"

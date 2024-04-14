@@ -1,4 +1,4 @@
-""" 
+"""
 Common utils for the backup/restore logic
 """
 
@@ -30,7 +30,7 @@ T = TypeVar("T")
 
 
 class BackupError(Exception):
-    """ Simple exception for specifying backup's error """
+    """Simple exception for specifying backup's error"""
 
     def __init__(self, message: str):
         super().__init__()
@@ -70,7 +70,7 @@ def s3_upload(db_name: str, backup_path: Path) -> None:
     try:
         logger.debug("Executing request (upload) to S3:\n %s\n %s", backup_path, dst_path)
         s3.upload_file(Filename=backup_path, Bucket=settings.S3_BUCKET_NAME, Key=dst_path)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.exception("Couldn't upload result backup to s3")
         raise BackupError(f"Couldn't upload result backup to s3: {exc!r}") from exc
 
@@ -227,7 +227,7 @@ def decrypt_file(db_name: str, file_path: Path) -> Path:
 
 
 def check_env_variables(*env_variables, raise_exception: bool = True) -> list[str]:
-    """ Detects: whic env-variables are missing in the env (and raise specific error if needed) """
+    """Detects: whic env-variables are missing in the env (and raise specific error if needed)"""
 
     missed_variables = []
     for variable in env_variables:
@@ -242,9 +242,9 @@ def check_env_variables(*env_variables, raise_exception: bool = True) -> list[st
 
 
 def copy_file(db_name: str, src: Path, dst: Path | str) -> None:
-    """ 
-    Simple copying file from src -> dst 
-    
+    """
+    Simple copying file from src -> dst
+
     :param db_name: current DB (needed for correct logging process)
     :param src: target path
     :param dst: destination path
@@ -277,7 +277,8 @@ def remove_file(file_path: Path):
     """
     Remove a file.
 
-    This function removes a file at the specified file path. If the file cannot be removed, a warning message is logged.
+    This function removes a file at the specified file path. If the file cannot be removed,
+    a warning message is logged.
 
     :param file_path: The path to the file to be removed.
     :type file_path: Path
@@ -285,7 +286,7 @@ def remove_file(file_path: Path):
     logger = logger_ctx.get(module_logger)
     try:
         call_with_logging(f"rm {file_path}")
-    except Exception as exc:
+    except IOError as exc:
         logger.warning("Couldn't remove (and skip) file with path: %s: %r ", file_path, exc)
 
 
@@ -331,21 +332,27 @@ class LoggerContext:
     }
 
     def debug(self, msg, *args):
+        """Debug message (skip if DEBUG is disbabled for run)"""
         self._log(msg, *args, level=logging.DEBUG)
 
     def info(self, msg, *args):
+        """Write to StdOut and Logging specific messaqge with info-level"""
         self._log(msg, *args, level=logging.INFO)
 
     def warning(self, msg, *args):
+        """Write to StdOut and Logging specific messaqge with warning-level"""
         self._log(msg, *args, level=logging.WARNING)
 
     def error(self, msg, *args):
+        """Write to StdOut and Logging specific messaqge with error-level"""
         self._log(msg, *args, level=logging.ERROR)
 
     def exception(self, msg, *args):
+        """Write to StdOut and Logging specific messaqge with error-level (with exc details)"""
         self._log(msg, *args, level=logging.ERROR, exception=True)
 
     def critical(self, msg, *args):
+        """Write to StdOut and Logging specific messaqge with critical-level"""
         self._log(msg, *args, level=logging.CRITICAL)
 
     def _log(self, msg: str, *args, level: int = logging.INFO, exception: bool = False):
@@ -370,16 +377,16 @@ def validate_envar_option(
     _, param: click.Option, value: T, required_vars: list[str] | None = None
 ) -> T:
     """
-    This function is used as a callback for validating the value of an environment variable 
-    option in a Click command. 
-    It checks if the specified environment variables are set and raises a click.UsageError 
+    This function is used as a callback for validating the value of an environment variable
+    option in a Click command.
+    It checks if the specified environment variables are set and raises a click.UsageError
     if any of them are missing.
 
     Parameters:
     - _: Placeholder for the command line context (not used).
     - param: The click.Option object representing the option being validated.
     - value: The value of the option being validated.
-    - required_vars: A list of environment variable names that are required for the option. 
+    - required_vars: A list of environment variable names that are required for the option.
         Defaults to None.
 
     Returns:
@@ -388,7 +395,7 @@ def validate_envar_option(
     Raises:
     - click.UsageError: If any of the required environment variables are missing.
 
-    """    
+    """
     required_vars = required_vars or ENV_VARS_REQUIRES.get(value, [])
     if value and (missed_vars := check_env_variables(*required_vars, raise_exception=False)):
         raise click.UsageError(
