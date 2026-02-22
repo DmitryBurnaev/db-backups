@@ -1,13 +1,13 @@
 version: '3'
 services:
   do:
-    image:
-      db-backups
+    image: db-backups
+    user: 488:488
     build:
       context: .
     env_file:
       - .env
     volumes:
-      - ${LOCAL_PATH}:/db-backups/backups
-      - ${LOG_PATH}:/db-backups/logs
+      - ${PWD}/.backups:/db-backups/backups
+      - ${PWD}/.logs:/db-backups/logs
     network_mode: "host"

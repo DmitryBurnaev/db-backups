@@ -8,6 +8,8 @@ $ python3 -m src.run --help
 
 import os
 import logging
+import logging.config
+from logging import config
 import typing
 from contextvars import ContextVar
 from typing import Callable, Optional

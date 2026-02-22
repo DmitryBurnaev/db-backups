@@ -7,3 +7,4 @@ backups/
 .env*
 run.sh
 .python-version
+bin/

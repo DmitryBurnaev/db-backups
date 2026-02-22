@@ -196,6 +196,9 @@ class PGServiceHandler(BaseHandler):
         )
 
     def _do_restore(self, file_path: Path) -> None:
+        #self._restore_db()
+        #return
+        
         if self._check_db_exists():
             msg = (
                 f"There is an existing DB on your postgres server. "

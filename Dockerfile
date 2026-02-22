@@ -1,10 +1,10 @@
 # copy source code
-FROM alpine:3.18 as code-layer
+FROM alpine:3.18 AS code-layer
 WORKDIR /db-backups
 
 COPY src .
 
-FROM python:3.12-slim-bookworm
+FROM python:3.13.12-slim-trixie
 ARG POETRY_VERSION="1.7.1"
 ARG PIP_DEFAULT_TIMEOUT=300
 WORKDIR /db-backups
@@ -17,7 +17,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
 		python3-dev \
         openssl \
-		postgresql-client-15 \
+		postgresql-client-17 \
     && pip install poetry==${POETRY_VERSION} \
     && poetry config --local virtualenvs.create false \
     && PIP_DEFAULT_TIMEOUT=${PIP_DEFAULT_TIMEOUT} poetry install --no-root --only=main --no-cache --no-ansi --no-interaction  \
