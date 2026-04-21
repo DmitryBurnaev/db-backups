@@ -11,7 +11,7 @@ python = "^3.12"
 click = "8.1.7"
 boto3 = "1.34.59"
 sentry-sdk = "2.53.0"
-python-dotenv = "1.0.1"
+python-dotenv = "1.2.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.2"
